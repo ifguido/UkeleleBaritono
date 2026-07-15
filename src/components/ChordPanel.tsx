@@ -21,6 +21,9 @@ interface Props {
   onClearLocks: (symbol: string) => void;
   onEditChord: (occurrenceIndex: number, newSymbol: string, wholeSong: boolean) => void;
   onRevertEdit: (occurrenceIndex: number) => void;
+  /** Duración en tiempos de la ocurrencia seleccionada. */
+  selectedBeats?: number;
+  onSetBeats: (occurrenceIndex: number, beats: number) => void;
   onClose: () => void;
 }
 
@@ -94,16 +97,20 @@ export default function ChordPanel({
   onClearLocks,
   onEditChord,
   onRevertEdit,
+  selectedBeats,
+  onSetBeats,
   onClose,
 }: Props) {
   const selectedSymbol = selected?.occurrence.chord.normalized ?? "";
   const selectedIndex = selected?.occurrence.index ?? -1;
   const [editValue, setEditValue] = useState(selectedSymbol);
   const [editError, setEditError] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     setEditValue(selectedSymbol);
     setEditError(null);
+    setEditOpen(false);
   }, [selectedSymbol, selectedIndex]);
 
   const applyEdit = (wholeSong: boolean) => {
@@ -195,47 +202,6 @@ export default function ChordPanel({
         Aparece ×{occurrencesOfSymbol.length} en la canción · {selected.reason}
       </p>
 
-      {/* Editar el acorde en sí (E → E7, C…) */}
-      <div className="mb-3 rounded-lg border border-stone-200 bg-stone-50/60 p-2.5">
-        <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-stone-500">
-          Cambiar acorde
-        </label>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <input
-            value={editValue}
-            onChange={(e) => {
-              setEditValue(e.target.value);
-              setEditError(null);
-            }}
-            onKeyDown={(e) => e.key === "Enter" && applyEdit(true)}
-            className="w-24 rounded border border-stone-300 bg-white px-2 py-1 font-mono text-sm outline-none focus:border-teal-600"
-          />
-          <button
-            onClick={() => applyEdit(true)}
-            disabled={editValue.trim() === selectedSymbol || !editValue.trim()}
-            className="rounded bg-teal-700 px-2 py-1 text-xs font-medium text-white hover:bg-teal-800 disabled:opacity-40"
-          >
-            Todos los {selected.occurrence.originalSymbol ?? selectedSymbol}
-          </button>
-          <button
-            onClick={() => applyEdit(false)}
-            disabled={editValue.trim() === selectedSymbol || !editValue.trim()}
-            className="rounded border border-stone-300 px-2 py-1 text-xs text-stone-600 hover:bg-stone-100 disabled:opacity-40"
-          >
-            Solo aquí
-          </button>
-        </div>
-        {editError && <p className="mt-1 text-xs text-rose-700">{editError}</p>}
-        {selected.occurrence.originalSymbol && (
-          <button
-            onClick={() => onRevertEdit(selected.occurrence.index)}
-            className="mt-1.5 text-xs text-amber-700 underline-offset-2 hover:underline"
-          >
-            ↩ Volver al original ({selected.occurrence.originalSymbol})
-          </button>
-        )}
-      </div>
-
       {/* Posición actual */}
       <div className="mb-3 flex items-center gap-3 rounded-lg border border-teal-600 bg-teal-50/40 p-3">
         <ChordDiagram frets={v.frets} barre={v.barre} size="lg" />
@@ -272,6 +238,74 @@ export default function ChordPanel({
           )}
         </div>
       </div>
+
+      {/* Duración de este acorde + editar símbolo (discreto) */}
+      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+        <div className="flex items-center gap-1.5">
+          <span className="text-stone-500">Duración:</span>
+          <button
+            onClick={() => onSetBeats(selectedIndex, Math.max(0.5, (selectedBeats ?? 1) - 0.5))}
+            className="h-6 w-6 rounded border border-stone-300 text-stone-600 hover:bg-stone-100"
+          >
+            −
+          </button>
+          <span className="w-14 text-center font-mono text-sm text-stone-800">
+            {selectedBeats ?? 1} {(selectedBeats ?? 1) === 1 ? "tiempo" : "tiempos"}
+          </span>
+          <button
+            onClick={() => onSetBeats(selectedIndex, Math.min(8, (selectedBeats ?? 1) + 0.5))}
+            className="h-6 w-6 rounded border border-stone-300 text-stone-600 hover:bg-stone-100"
+          >
+            +
+          </button>
+        </div>
+        <button
+          onClick={() => setEditOpen((o) => !o)}
+          className="text-stone-500 underline-offset-2 hover:text-stone-800 hover:underline"
+        >
+          ✎ Cambiar acorde
+        </button>
+      </div>
+
+      {editOpen && (
+        <div className="mb-3 rounded-lg border border-stone-200 bg-stone-50/60 p-2.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <input
+              autoFocus
+              value={editValue}
+              onChange={(e) => {
+                setEditValue(e.target.value);
+                setEditError(null);
+              }}
+              onKeyDown={(e) => e.key === "Enter" && applyEdit(true)}
+              className="w-24 rounded border border-stone-300 bg-white px-2 py-1 font-mono text-sm outline-none focus:border-teal-600"
+            />
+            <button
+              onClick={() => applyEdit(true)}
+              disabled={editValue.trim() === selectedSymbol || !editValue.trim()}
+              className="rounded bg-teal-700 px-2 py-1 text-xs font-medium text-white hover:bg-teal-800 disabled:opacity-40"
+            >
+              Todos los {selected.occurrence.originalSymbol ?? selectedSymbol}
+            </button>
+            <button
+              onClick={() => applyEdit(false)}
+              disabled={editValue.trim() === selectedSymbol || !editValue.trim()}
+              className="rounded border border-stone-300 px-2 py-1 text-xs text-stone-600 hover:bg-stone-100 disabled:opacity-40"
+            >
+              Solo aquí
+            </button>
+          </div>
+          {editError && <p className="mt-1 text-xs text-rose-700">{editError}</p>}
+          {selected.occurrence.originalSymbol && (
+            <button
+              onClick={() => onRevertEdit(selected.occurrence.index)}
+              className="mt-1.5 text-xs text-amber-700 underline-offset-2 hover:underline"
+            >
+              ↩ Volver al original ({selected.occurrence.originalSymbol})
+            </button>
+          )}
+        </div>
+      )}
 
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
         Otras posiciones válidas

@@ -1,56 +1,59 @@
 /**
- * Estimación de la duración relativa de cada acorde.
+ * Estimación de la duración relativa de cada acorde, en "tiempos".
  *
- * Dos fuentes, en orden de prioridad:
- * 1. Anotación explícita del usuario: "E*2" dura el doble, "B7*0.5" la mitad.
- * 2. El layout de la canción: en un chart con acordes sobre la letra, la
- *    distancia horizontal hasta el próximo acorde (y los saltos de línea)
- *    aproximan cuánto "texto" abarca cada acorde, y por lo tanto su duración.
+ * Prioridades:
+ * 1. Override manual del usuario (stepper en el panel).
+ * 2. Anotación explícita en el texto: "E*2" dura 2, "B7*0.5" dura 0.5.
+ * 3. Layout de la canción: cuánto texto (letra) transcurre hasta el próximo
+ *    acorde. Un acorde sobre el que pasa mucha letra —o una línea entera sin
+ *    acordes debajo— SOSTIENE: dura más. Así, si el renglón siguiente arranca
+ *    sin acorde, el anterior sigue sonando.
  *
- * Las duraciones inferidas se cuantizan a medios tiempos (0.5, 1, 1.5, 2…)
- * para que el resultado suene musical y no arrastrado.
+ * Todo se cuantiza a medios tiempos para que suene musical.
  */
 
 import { ParsedSong } from "./song-parser";
 
 export type RhythmMode = "uniform" | "layout";
 
-export function estimateBeats(song: ParsedSong, mode: RhythmMode): number[] {
+/** Posición absoluta de cada acorde en el "flujo de texto" de la canción. */
+function flowPositions(song: ParsedSong): number[] {
+  // Ancho de cada línea; +1 por el salto de renglón para que la letra que
+  // pasa entre dos acordes de líneas distintas cuente como duración.
+  const lineWidth = song.lines.map((l) => l.text.length + 1);
+  const prefix: number[] = [0];
+  for (let i = 0; i < lineWidth.length; i++) prefix.push(prefix[i] + lineWidth[i]);
+
+  return song.occurrences.map((o) => prefix[o.lineIndex] + o.charIndex);
+}
+
+export function estimateBeats(
+  song: ParsedSong,
+  mode: RhythmMode,
+  overrides: Record<number, number> = {},
+): number[] {
   const occs = song.occurrences;
-  const explicit = occs.map((o) => o.beats ?? null);
+  const base = occs.map((o) => overrides[o.index] ?? o.beats ?? null);
+
   if (mode === "uniform" || occs.length < 3) {
-    return explicit.map((b) => b ?? 1);
+    return base.map((b) => b ?? 1);
   }
 
-  // Distancia "en texto" de cada acorde hasta el siguiente
+  const pos = flowPositions(song);
   const gaps: number[] = [];
   for (let i = 0; i < occs.length; i++) {
-    const cur = occs[i];
-    const next = occs[i + 1];
-    if (!next) {
-      gaps.push(NaN);
-      continue;
-    }
-    if (next.lineIndex === cur.lineIndex) {
-      gaps.push(next.charIndex - cur.charIndex);
-    } else {
-      // El último acorde de la línea "abarca" hasta el final del verso;
-      // el arranque de la línea siguiente pesa menos.
-      const lineLength = song.lines[cur.lineIndex]?.text.length ?? cur.charIndex;
-      gaps.push(Math.max(lineLength - cur.charIndex, 6) + next.charIndex * 0.4);
-    }
+    gaps.push(i + 1 < occs.length ? pos[i + 1] - pos[i] : NaN);
   }
 
   const valid = gaps.filter((g) => !isNaN(g) && g > 0).sort((a, b) => a - b);
-  if (valid.length < 2) return explicit.map((b) => b ?? 1);
-  const median = valid[Math.floor(valid.length / 2)];
-  if (median <= 0) return explicit.map((b) => b ?? 1);
+  if (valid.length < 2) return base.map((b) => b ?? 1);
+  const median = valid[Math.floor(valid.length / 2)] || 1;
 
   return occs.map((occ, i) => {
-    if (explicit[i]) return explicit[i]!;
+    if (base[i] != null) return base[i]!;
     const gap = gaps[i];
     if (isNaN(gap) || gap <= 0) return 1;
     const quantized = Math.round((gap / median) * 2) / 2;
-    return Math.min(3, Math.max(0.5, quantized));
+    return Math.min(8, Math.max(0.5, quantized));
   });
 }

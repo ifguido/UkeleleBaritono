@@ -14,6 +14,12 @@ export interface SavedSong {
   locks: Record<number, string>;
   /** Acordes editados por el usuario (E → E7…). */
   edits?: ChordEdits;
+  /** Tempo en BPM. */
+  bpm?: number;
+  /** Modo de ritmo: "layout" | "uniform". */
+  rhythm?: string;
+  /** Duraciones ajustadas a mano por ocurrencia. */
+  beatsOverrides?: Record<number, number>;
   savedAt: string; // ISO
 }
 

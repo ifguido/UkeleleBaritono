@@ -469,6 +469,22 @@ describe("ritmo", () => {
     const parsed = parseSong("C        G  Am\nletra de prueba aquí");
     expect(estimateBeats(parsed, "uniform")).toEqual([1, 1, 1]);
   });
+
+  it("override manual de duración por ocurrencia", () => {
+    const parsed = parseSong("C  G  Am\nletra de prueba aquí");
+    const beats = estimateBeats(parsed, "uniform", { 1: 4 });
+    expect(beats).toEqual([1, 4, 1]);
+  });
+
+  it("modo layout: un acorde sostiene sobre una línea de letra sin acordes", () => {
+    // C ocupa dos líneas de letra antes de que aparezca G → sostiene (dura más)
+    const parsed = parseSong(
+      "C\nprimera linea de la letra\nsegunda linea sin acordes\nG   Am\ntercera linea con sol la",
+    );
+    const beats = estimateBeats(parsed, "layout");
+    expect(beats[0]).toBeGreaterThan(beats[1]); // C sostiene más que G
+    expect(beats[0]).toBeGreaterThanOrEqual(1);
+  });
 });
 
 describe("tonalidad", () => {

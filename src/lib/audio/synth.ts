@@ -27,28 +27,48 @@ const SAMPLE_FILES: [Midi, string][] = [
   [74, "D5"], [77, "F5"], [80, "Ab5"], [83, "B5"],
 ];
 let sampleBuffers: Map<Midi, AudioBuffer> | null = null;
-let samplesLoading = false;
+let sampleLoadPromise: Promise<void> | null = null;
 
-async function loadSamples(ac: AudioContext): Promise<void> {
-  if (sampleBuffers || samplesLoading) return;
-  samplesLoading = true;
-  try {
-    const entries = await Promise.all(
-      SAMPLE_FILES.map(async ([midi, name]) => {
-        const res = await fetch(`/samples/nylon/${name}.mp3`);
-        if (!res.ok) throw new Error(`sample ${name}: ${res.status}`);
-        const data = await res.arrayBuffer();
-        const buffer = await ac.decodeAudioData(data);
-        return [midi, buffer] as const;
-      }),
-    );
-    sampleBuffers = new Map(entries);
-  } catch {
-    // Sin red o archivo faltante: seguimos con el sintetizador.
-    sampleBuffers = null;
-  } finally {
-    samplesLoading = false;
+function loadSamples(ac: AudioContext): Promise<void> {
+  if (sampleLoadPromise) return sampleLoadPromise;
+  sampleLoadPromise = (async () => {
+    try {
+      const entries = await Promise.all(
+        SAMPLE_FILES.map(async ([midi, name]) => {
+          const res = await fetch(`/samples/nylon/${name}.mp3`);
+          if (!res.ok) throw new Error(`sample ${name}: ${res.status}`);
+          const data = await res.arrayBuffer();
+          const buffer = await ac.decodeAudioData(data);
+          return [midi, buffer] as const;
+        }),
+      );
+      sampleBuffers = new Map(entries);
+    } catch {
+      // Sin red o archivo faltante: seguimos con el sintetizador.
+      sampleBuffers = null;
+    }
+  })();
+  return sampleLoadPromise;
+}
+
+/**
+ * Ejecuta `run` cuando los samples estén decodificados, para que NUNCA suene
+ * el fallback sintético en el primer play. Si la carga falla o tarda demasiado,
+ * corre igual (con síntesis) para no dejar la reproducción colgada.
+ */
+function whenSamplesReady(run: () => void): void {
+  if (sampleBuffers || !sampleLoadPromise) {
+    run();
+    return;
   }
+  let done = false;
+  const go = () => {
+    if (done) return;
+    done = true;
+    run();
+  };
+  sampleLoadPromise.then(go);
+  setTimeout(go, 3000);
 }
 
 function nearestSample(midi: Midi): { buffer: AudioBuffer; rate: number } | null {
@@ -243,13 +263,17 @@ function scheduleNote(
 }
 
 /**
- * Precalienta el audio: dispara la descarga de los samples para que el
- * primer acorde ya suene con el instrumento real. Llamar al montar la UI.
+ * Precalienta el audio al montar la UI: crea el AudioContext (queda
+ * suspendido hasta el primer gesto) y DECODIFICA los samples, de modo que
+ * el primer play ya use el instrumento real y jamás el fallback sintético.
  */
 export function preloadAudio(): void {
   if (typeof window === "undefined") return;
-  for (const [, name] of SAMPLE_FILES) {
-    void fetch(`/samples/nylon/${name}.mp3`).catch(() => {});
+  try {
+    audioContext();
+  } catch {
+    // Algunos navegadores no permiten crear el contexto sin gesto: los
+    // samples se decodificarán en el primer play, protegidos por whenSamplesReady.
   }
 }
 
@@ -280,18 +304,24 @@ function stopScheduled(ac: AudioContext, scheduled: Scheduled): void {
 export function playChord(midiNotes: Midi[], strumMs = 26): void {
   if (midiNotes.length === 0) return;
   const ac = audioContext();
-  const target = createBus(ac);
-  const start = ac.currentTime + 0.02;
-  midiNotes.forEach((midi, i) => scheduleNote(ac, target, midi, start + (i * strumMs) / 1000, 0.66));
+  whenSamplesReady(() => {
+    const target = createBus(ac);
+    const start = ac.currentTime + 0.02;
+    midiNotes.forEach((midi, i) =>
+      scheduleNote(ac, target, midi, start + (i * strumMs) / 1000, 0.66),
+    );
+  });
 }
 
 /** Arpegio: nota por nota. */
 export function playArpeggio(midiNotes: Midi[], noteMs = 320): void {
   if (midiNotes.length === 0) return;
   const ac = audioContext();
-  const target = createBus(ac);
-  const start = ac.currentTime + 0.02;
-  midiNotes.forEach((midi, i) => scheduleNote(ac, target, midi, start + (i * noteMs) / 1000, 0.6));
+  whenSamplesReady(() => {
+    const target = createBus(ac);
+    const start = ac.currentTime + 0.02;
+    midiNotes.forEach((midi, i) => scheduleNote(ac, target, midi, start + (i * noteMs) / 1000, 0.6));
+  });
 }
 
 /**
@@ -306,25 +336,35 @@ export function playProgression(
   beatsList?: number[],
 ): { cancel: () => void; totalMs: number } {
   const ac = audioContext();
-  const target = createBus(ac);
-  const start = ac.currentTime + 0.05;
   const timers: ReturnType<typeof setTimeout>[] = [];
+  let target: Scheduled | null = null;
+  let cancelled = false;
 
-  let offsetMs = 0;
-  chords.forEach((notes, i) => {
-    const when = start + offsetMs / 1000;
-    notes.forEach((midi, j) => scheduleNote(ac, target, midi, when + (j * 26) / 1000, 0.66));
-    if (onChord) {
-      timers.push(setTimeout(() => onChord(i), Math.max(0, (when - ac.currentTime) * 1000)));
-    }
-    offsetMs += beatMs * (beatsList?.[i] ?? 1);
+  // Duración total (independiente de los samples) para sincronizar la UI
+  let totalMs = 600;
+  for (let i = 0; i < chords.length; i++) totalMs += beatMs * (beatsList?.[i] ?? 1);
+
+  whenSamplesReady(() => {
+    if (cancelled) return;
+    target = createBus(ac);
+    const start = ac.currentTime + 0.05;
+    let offsetMs = 0;
+    chords.forEach((notes, i) => {
+      const when = start + offsetMs / 1000;
+      notes.forEach((midi, j) => scheduleNote(ac, target!, midi, when + (j * 26) / 1000, 0.66));
+      if (onChord) {
+        timers.push(setTimeout(() => onChord(i), Math.max(0, (when - ac.currentTime) * 1000)));
+      }
+      offsetMs += beatMs * (beatsList?.[i] ?? 1);
+    });
   });
 
   return {
     cancel: () => {
+      cancelled = true;
       timers.forEach(clearTimeout);
-      stopScheduled(ac, target);
+      if (target) stopScheduled(ac, target);
     },
-    totalMs: offsetMs + 600,
+    totalMs,
   };
 }

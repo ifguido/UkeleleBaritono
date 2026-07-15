@@ -16,7 +16,7 @@ import {
   optimizeProgression,
   parseSong,
 } from "@/lib/engine";
-import { playProgression, preloadAudio } from "@/lib/audio/synth";
+import { playChord, playProgression, preloadAudio } from "@/lib/audio/synth";
 import { SavedSong, deleteSong, listSongs, saveSong } from "@/lib/storage";
 import AdvancedSettings, { Settings } from "@/components/AdvancedSettings";
 import SongView, { OccurrenceRange } from "@/components/SongView";
@@ -56,12 +56,14 @@ export default function HomePage() {
   const [rangeMode, setRangeMode] = useState(false);
   const [range, setRange] = useState<OccurrenceRange | null>(null);
   const [practiceOpen, setPracticeOpen] = useState(false);
-  const [speed, setSpeed] = useState<"lenta" | "normal" | "rapida">("normal");
+  const [bpm, setBpm] = useState(90);
   const [rhythm, setRhythm] = useState<RhythmMode>("layout");
+  const [beatsOverrides, setBeatsOverrides] = useState<Record<number, number>>({});
   const playingRef = useRef<{ cancel: () => void } | null>(null);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const BEAT_MS = { lenta: 1400, normal: 950, rapida: 650 } as const;
+  // Un "tiempo" (beats=1) dura 60000/bpm ms.
+  const beatMs = Math.round(60000 / bpm);
 
   useEffect(() => {
     setSaved(listSongs());
@@ -117,6 +119,7 @@ export default function HomePage() {
     stopPlayback();
     setLocks({});
     setEdits(EMPTY_EDITS);
+    setBeatsOverrides({});
     setSelectedOcc(null);
     setCurrentSongId(null);
 
@@ -222,8 +225,8 @@ export default function HomePage() {
 
   // Duración relativa de cada acorde (por índice global de ocurrencia)
   const beatsByOccurrence = useMemo(
-    () => (song ? estimateBeats(song, rhythm) : []),
-    [song, rhythm],
+    () => (song ? estimateBeats(song, rhythm, beatsOverrides) : []),
+    [song, rhythm, beatsOverrides],
   );
 
   const playOccurrences = useCallback(
@@ -232,7 +235,7 @@ export default function HomePage() {
       stopPlayback();
       const handle = playProgression(
         occurrences.map((o) => o.voicing.midiNotes),
-        BEAT_MS[speed],
+        beatMs,
         (i) => setPlayingIndex(occurrences[i]?.occurrence.index ?? null),
         occurrences.map((o) => beatsByOccurrence[o.occurrence.index] ?? 1),
       );
@@ -242,8 +245,12 @@ export default function HomePage() {
         playingRef.current = null;
       }, handle.totalMs);
     },
-    [speed, stopPlayback, BEAT_MS, beatsByOccurrence],
+    [beatMs, stopPlayback, beatsByOccurrence],
   );
+
+  const handleSetBeats = (occurrenceIndex: number, beats: number) => {
+    setBeatsOverrides((prev) => ({ ...prev, [occurrenceIndex]: beats }));
+  };
 
   const handlePlay = () => {
     if (result) playOccurrences(result.occurrences);
@@ -261,6 +268,9 @@ export default function HomePage() {
   const handleChordClick = (index: number) => {
     if (!rangeMode) {
       setSelectedOcc(index);
+      // Al elegir un acorde, sonar su voicing: se ve y se escucha en el panel.
+      const occ = result?.occurrences.find((o) => o.occurrence.index === index);
+      if (occ) playChord(occ.voicing.midiNotes);
       return;
     }
     // Primer clic: inicio. Segundo: fin. El siguiente arranca un rango nuevo.
@@ -292,6 +302,9 @@ export default function HomePage() {
       voicingOptions: settings.voicingOptions,
       locks,
       edits,
+      bpm,
+      rhythm,
+      beatsOverrides,
     });
     setCurrentSongId(stored.id);
     setSaved(listSongs());
@@ -304,6 +317,9 @@ export default function HomePage() {
     setLocks(s.locks);
     setCurrentSongId(s.id);
     setEdits(s.edits ?? EMPTY_EDITS);
+    setBpm(s.bpm ?? 90);
+    setRhythm((s.rhythm as RhythmMode) ?? "layout");
+    setBeatsOverrides(s.beatsOverrides ?? {});
     runOptimize(s.text, loaded, s.locks, s.edits ?? EMPTY_EDITS);
   };
 
@@ -469,16 +485,21 @@ export default function HomePage() {
               >
                 🎸 Tocar
               </button>
-              <select
-                value={speed}
-                onChange={(e) => setSpeed(e.target.value as typeof speed)}
-                title="Velocidad de reproducción"
-                className="rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm text-stone-700"
+              <label
+                title="Tempo de la canción entera, en pulsos por minuto"
+                className="flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-2 py-1 text-sm text-stone-700"
               >
-                <option value="lenta">♩ Lenta</option>
-                <option value="normal">♩ Normal</option>
-                <option value="rapida">♩ Rápida</option>
-              </select>
+                <span className="text-stone-500">Tempo</span>
+                <input
+                  type="range"
+                  min={40}
+                  max={180}
+                  value={bpm}
+                  onChange={(e) => setBpm(Number(e.target.value))}
+                  className="w-20 accent-teal-700"
+                />
+                <span className="w-14 font-mono text-xs tabular-nums">{bpm} BPM</span>
+              </label>
               <select
                 value={rhythm}
                 onChange={(e) => setRhythm(e.target.value as RhythmMode)}
@@ -661,6 +682,8 @@ export default function HomePage() {
               onClearLocks={handleClearLocks}
               onEditChord={handleEditChord}
               onRevertEdit={handleRevertEdit}
+              selectedBeats={selectedOcc !== null ? beatsByOccurrence[selectedOcc] : undefined}
+              onSetBeats={handleSetBeats}
               onClose={() => setSelectedOcc(null)}
             />
           </div>
@@ -672,7 +695,7 @@ export default function HomePage() {
               optimized={optimizedMap}
               occurrences={result.occurrences}
               beats={beatsByOccurrence}
-              initialBeatMs={BEAT_MS[speed]}
+              initialBeatMs={beatMs}
               onClose={() => setPracticeOpen(false)}
             />
           )}
