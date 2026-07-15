@@ -2,7 +2,6 @@
 
 import { ParsedSong } from "@/lib/engine/song-parser";
 import { OptimizedOccurrence } from "@/lib/engine/optimizer";
-import { playChord } from "@/lib/audio/synth";
 
 export interface OccurrenceRange {
   start: number;
@@ -87,48 +86,35 @@ export default function SongView({
               const isSameSymbol =
                 selectedSymbol !== null && token.chord.normalized === selectedSymbol;
               parts.push(
-                <span key={j} className="group relative inline-block">
-                  <button
-                    data-occ={token.occurrenceIndex}
-                    onClick={() => onChordClick(token.occurrenceIndex!)}
-                    title={
-                      rangeMode
-                        ? "Marcar como límite de la parte a reproducir"
-                        : occ
-                          ? `${occ.voicing.display} — clic para ver posiciones`
-                          : token.raw
-                    }
-                    className={`rounded px-0.5 font-semibold transition-colors ${
-                      isPlaying
-                        ? "bg-teal-600 text-white"
-                        : selected
-                          ? "bg-teal-100 text-teal-900 ring-1 ring-teal-400"
-                          : isSelected
-                            ? "bg-teal-700 text-white"
-                            : isSameSymbol
-                              ? "bg-teal-100 text-teal-900"
-                              : occ?.locked
-                                ? "bg-amber-100 text-amber-900 hover:bg-amber-200"
-                                : rangeMode
-                                  ? "text-teal-700 outline-dashed outline-1 outline-teal-300 hover:bg-teal-50"
-                                  : "text-teal-700 hover:bg-teal-50"
-                    }`}
-                  >
-                    {token.raw}
-                  </button>
-                  {occ && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        playChord(occ.voicing.midiNotes);
-                      }}
-                      title={`Escuchar ${token.raw} (${occ.voicing.display})`}
-                      className="no-print absolute -top-4 left-1/2 z-10 hidden -translate-x-1/2 rounded-full border border-teal-300 bg-white px-1.5 pb-0.5 font-sans text-[11px] leading-4 text-teal-700 shadow-sm hover:bg-teal-600 hover:text-white group-hover:block"
-                    >
-                      ▶
-                    </button>
-                  )}
-                </span>,
+                <button
+                  key={j}
+                  data-occ={token.occurrenceIndex}
+                  onClick={() => onChordClick(token.occurrenceIndex!)}
+                  title={
+                    rangeMode
+                      ? "Marcar como límite de la parte a reproducir"
+                      : occ
+                        ? `${occ.voicing.display} — clic para escuchar y ver posiciones`
+                        : token.raw
+                  }
+                  className={`rounded px-0.5 font-semibold transition-colors ${
+                    isPlaying
+                      ? "bg-teal-600 text-white"
+                      : selected
+                        ? "bg-teal-100 text-teal-900 ring-1 ring-teal-400"
+                        : isSelected
+                          ? "bg-teal-700 text-white"
+                          : isSameSymbol
+                            ? "bg-teal-100 text-teal-900"
+                            : occ?.locked
+                              ? "bg-amber-100 text-amber-900 hover:bg-amber-200"
+                              : rangeMode
+                                ? "text-teal-700 outline-dashed outline-1 outline-teal-300 hover:bg-teal-50"
+                                : "text-teal-700 hover:bg-teal-50"
+                  }`}
+                >
+                  {token.raw}
+                </button>,
               );
             } else {
               parts.push(

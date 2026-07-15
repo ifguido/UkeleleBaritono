@@ -21,7 +21,6 @@ import { SavedSong, deleteSong, listSongs, saveSong } from "@/lib/storage";
 import AdvancedSettings, { Settings } from "@/components/AdvancedSettings";
 import SongView, { OccurrenceRange } from "@/components/SongView";
 import ChordPanel from "@/components/ChordPanel";
-import PracticeMode from "@/components/PracticeMode";
 import ChordDiagram from "@/components/ChordDiagram";
 import { difficultyLabel } from "@/components/VoicingCard";
 
@@ -40,7 +39,7 @@ G#m  B  Cdim  C#m
 C  Am  G#m  F#m`;
 
 export default function HomePage() {
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState("https://www.cifraclub.com/milo-j/nino/");
   const [song, setSong] = useState<ParsedSong | null>(null);
   const [result, setResult] = useState<OptimizeResult | null>(null);
   const [songKey, setSongKey] = useState<DetectedKey | null>(null);
@@ -55,7 +54,6 @@ export default function HomePage() {
   const [currentSongId, setCurrentSongId] = useState<string | null>(null);
   const [rangeMode, setRangeMode] = useState(false);
   const [range, setRange] = useState<OccurrenceRange | null>(null);
-  const [practiceOpen, setPracticeOpen] = useState(false);
   const [bpm, setBpm] = useState(90);
   const [rhythm, setRhythm] = useState<RhythmMode>("layout");
   const [beatsOverrides, setBeatsOverrides] = useState<Record<number, number>>({});
@@ -265,12 +263,16 @@ export default function HomePage() {
     );
   };
 
+  const selectAndPlay = (index: number) => {
+    setSelectedOcc(index);
+    // Al elegir un acorde, sonar su voicing: se ve y se escucha en el panel.
+    const occ = result?.occurrences.find((o) => o.occurrence.index === index);
+    if (occ) playChord(occ.voicing.midiNotes);
+  };
+
   const handleChordClick = (index: number) => {
     if (!rangeMode) {
-      setSelectedOcc(index);
-      // Al elegir un acorde, sonar su voicing: se ve y se escucha en el panel.
-      const occ = result?.occurrences.find((o) => o.occurrence.index === index);
-      if (occ) playChord(occ.voicing.midiNotes);
+      selectAndPlay(index);
       return;
     }
     // Primer clic: inicio. Segundo: fin. El siguiente arranca un rango nuevo.
@@ -476,15 +478,6 @@ export default function HomePage() {
               )}
             </div>
             <div className="no-print ml-auto flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => {
-                  stopPlayback();
-                  setPracticeOpen(true);
-                }}
-                className="rounded-lg bg-teal-700 px-4 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-800"
-              >
-                🎸 Tocar
-              </button>
               <label
                 title="Tempo de la canción entera, en pulsos por minuto"
                 className="flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-2 py-1 text-sm text-stone-700"
@@ -665,9 +658,9 @@ export default function HomePage() {
           </div>
 
           <div
-            className={`no-print lg:sticky lg:top-4 ${
+            className={`no-print lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:overscroll-contain ${
               selected
-                ? "max-lg:fixed max-lg:inset-x-2 max-lg:bottom-2 max-lg:z-50 max-lg:max-h-[62vh] max-lg:overflow-y-auto max-lg:rounded-xl max-lg:shadow-2xl"
+                ? "max-lg:fixed max-lg:inset-x-2 max-lg:bottom-2 max-lg:z-50 max-lg:max-h-[70vh] max-lg:overflow-y-auto max-lg:overscroll-contain max-lg:rounded-xl max-lg:shadow-2xl"
                 : ""
             }`}
           >
@@ -677,7 +670,7 @@ export default function HomePage() {
               songKey={songKey}
               selected={selected}
               locks={locks}
-              onSelectOccurrence={setSelectedOcc}
+              onSelectOccurrence={selectAndPlay}
               onApply={handleApply}
               onClearLocks={handleClearLocks}
               onEditChord={handleEditChord}
@@ -688,17 +681,6 @@ export default function HomePage() {
             />
           </div>
           </div>
-
-          {practiceOpen && (
-            <PracticeMode
-              song={song}
-              optimized={optimizedMap}
-              occurrences={result.occurrences}
-              beats={beatsByOccurrence}
-              initialBeatMs={beatMs}
-              onClose={() => setPracticeOpen(false)}
-            />
-          )}
         </>
       )}
     </div>
