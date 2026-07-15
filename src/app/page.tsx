@@ -9,8 +9,10 @@ import {
   OptimizeResult,
   OptimizedOccurrence,
   ParsedSong,
+  RhythmMode,
   applyChordEdits,
   detectKey,
+  estimateBeats,
   optimizeProgression,
   parseSong,
 } from "@/lib/engine";
@@ -55,6 +57,7 @@ export default function HomePage() {
   const [range, setRange] = useState<OccurrenceRange | null>(null);
   const [practiceOpen, setPracticeOpen] = useState(false);
   const [speed, setSpeed] = useState<"lenta" | "normal" | "rapida">("normal");
+  const [rhythm, setRhythm] = useState<RhythmMode>("layout");
   const playingRef = useRef<{ cancel: () => void } | null>(null);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -217,6 +220,12 @@ export default function HomePage() {
     runOptimize(input, settings, locks, next);
   };
 
+  // Duración relativa de cada acorde (por índice global de ocurrencia)
+  const beatsByOccurrence = useMemo(
+    () => (song ? estimateBeats(song, rhythm) : []),
+    [song, rhythm],
+  );
+
   const playOccurrences = useCallback(
     (occurrences: OptimizedOccurrence[]) => {
       if (occurrences.length === 0) return;
@@ -225,6 +234,7 @@ export default function HomePage() {
         occurrences.map((o) => o.voicing.midiNotes),
         BEAT_MS[speed],
         (i) => setPlayingIndex(occurrences[i]?.occurrence.index ?? null),
+        occurrences.map((o) => beatsByOccurrence[o.occurrence.index] ?? 1),
       );
       playingRef.current = handle;
       resetTimerRef.current = setTimeout(() => {
@@ -232,7 +242,7 @@ export default function HomePage() {
         playingRef.current = null;
       }, handle.totalMs);
     },
-    [speed, stopPlayback, BEAT_MS],
+    [speed, stopPlayback, BEAT_MS, beatsByOccurrence],
   );
 
   const handlePlay = () => {
@@ -469,6 +479,15 @@ export default function HomePage() {
                 <option value="normal">♩ Normal</option>
                 <option value="rapida">♩ Rápida</option>
               </select>
+              <select
+                value={rhythm}
+                onChange={(e) => setRhythm(e.target.value as RhythmMode)}
+                title="Duración de cada acorde: pareja, o estimada según cuánta letra abarca (y anotaciones E*2)"
+                className="rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm text-stone-700"
+              >
+                <option value="layout">Ritmo: según letra</option>
+                <option value="uniform">Ritmo: uniforme</option>
+              </select>
               <button
                 onClick={playingIndex === null ? handlePlay : stopPlayback}
                 className="rounded-lg border border-teal-700 px-3 py-1.5 text-sm font-medium text-teal-800 hover:bg-teal-50"
@@ -652,6 +671,7 @@ export default function HomePage() {
               song={song}
               optimized={optimizedMap}
               occurrences={result.occurrences}
+              beats={beatsByOccurrence}
               initialBeatMs={BEAT_MS[speed]}
               onClose={() => setPracticeOpen(false)}
             />

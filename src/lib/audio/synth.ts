@@ -295,25 +295,29 @@ export function playArpeggio(midiNotes: Midi[], noteMs = 320): void {
 }
 
 /**
- * Progresión: un rasgueo por acorde.
+ * Progresión: un rasgueo por acorde. `beatsList` (opcional) da la duración
+ * relativa de cada acorde en tiempos; sin ella, todos duran igual.
  * `cancel()` detiene tanto los avisos de UI como el audio ya agendado.
  */
 export function playProgression(
   chords: Midi[][],
   beatMs = 900,
   onChord?: (index: number) => void,
+  beatsList?: number[],
 ): { cancel: () => void; totalMs: number } {
   const ac = audioContext();
   const target = createBus(ac);
   const start = ac.currentTime + 0.05;
   const timers: ReturnType<typeof setTimeout>[] = [];
 
+  let offsetMs = 0;
   chords.forEach((notes, i) => {
-    const when = start + (i * beatMs) / 1000;
+    const when = start + offsetMs / 1000;
     notes.forEach((midi, j) => scheduleNote(ac, target, midi, when + (j * 26) / 1000, 0.66));
     if (onChord) {
       timers.push(setTimeout(() => onChord(i), Math.max(0, (when - ac.currentTime) * 1000)));
     }
+    offsetMs += beatMs * (beatsList?.[i] ?? 1);
   });
 
   return {
@@ -321,6 +325,6 @@ export function playProgression(
       timers.forEach(clearTimeout);
       stopScheduled(ac, target);
     },
-    totalMs: chords.length * beatMs + 600,
+    totalMs: offsetMs + 600,
   };
 }

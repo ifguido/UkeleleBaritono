@@ -5,3 +5,4 @@ export * from "./identify";
 export * from "./song-parser";
 export * from "./key-detect";
 export * from "./optimizer";
+export * from "./rhythm";

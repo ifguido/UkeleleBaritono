@@ -11,6 +11,8 @@ interface Props {
   song: ParsedSong;
   optimized: Map<number, OptimizedOccurrence>;
   occurrences: OptimizedOccurrence[];
+  /** Duración relativa de cada acorde, por índice global de ocurrencia. */
+  beats?: number[];
   initialBeatMs?: number;
   onClose: () => void;
 }
@@ -29,6 +31,7 @@ export default function PracticeMode({
   song,
   optimized,
   occurrences,
+  beats,
   initialBeatMs = 950,
   onClose,
 }: Props) {
@@ -56,12 +59,13 @@ export default function PracticeMode({
         slice.map((o) => o.voicing.midiNotes),
         beatMs,
         (i) => setCurrent(from + i),
+        beats ? slice.map((o) => beats[o.occurrence.index] ?? 1) : undefined,
       );
       handleRef.current = handle;
       endTimerRef.current = setTimeout(() => setPlaying(false), handle.totalMs);
       setPlaying(true);
     },
-    [beatMs, occurrences, stop],
+    [beatMs, occurrences, beats, stop],
   );
 
   const step = useCallback(

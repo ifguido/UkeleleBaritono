@@ -142,7 +142,16 @@ function cleanChordToken(raw: string): string {
 }
 
 /** ¿El token tiene pinta de acorde (aunque esté mal escrito)? */
-const CHORDISH_RE = /^[A-H][#b♯♭]?[A-Za-z0-9#b♯♭+°ºøΔ()/-]*$/;
+const CHORDISH_RE = /^[A-H][#b♯♭]?[A-Za-z0-9#b♯♭+°ºøΔ()/*.-]*$/;
+
+/** Anotación de duración: "E*2" → { symbol: "E", beats: 2 }. */
+function splitBeats(token: string): { symbol: string; beats?: number } {
+  const m = /^(.+?)\*(\d+(?:\.\d+)?)$/.exec(token);
+  if (!m) return { symbol: token };
+  const beats = parseFloat(m[2]);
+  if (!isFinite(beats) || beats <= 0 || beats > 16) return { symbol: token };
+  return { symbol: m[1], beats };
+}
 
 /** Una línea es "de acordes" si (casi) todos sus tokens no-separadores son acordes. */
 function classifyChordLine(tokens: RawToken[]): { isChordLine: boolean; parsed: ChordToken[] } {
@@ -156,10 +165,11 @@ function classifyChordLine(tokens: RawToken[]): { isChordLine: boolean; parsed: 
     const cleaned = cleanChordToken(t.raw);
     const chordish = cleaned ? CHORDISH_RE.test(cleaned) : false;
     if (!chordish) allChordish = false;
-    const result = cleaned ? parseChord(cleaned) : null;
+    const { symbol, beats } = splitBeats(cleaned);
+    const result = symbol ? parseChord(symbol) : null;
     if (result?.ok) {
       chordCount++;
-      parsed.push({ raw: t.raw, charIndex: t.charIndex, chord: result.chord });
+      parsed.push({ raw: t.raw, charIndex: t.charIndex, chord: result.chord, beats });
     } else {
       parsed.push({
         raw: t.raw,
@@ -265,6 +275,7 @@ export function parseSong(input: string): ParsedSong {
             lineIndex,
             charIndex: token.charIndex,
             sectionName: currentSection,
+            beats: token.beats,
           });
           if (!uniqueMap.has(token.chord.normalized)) {
             uniqueMap.set(token.chord.normalized, token.chord);

@@ -4,6 +4,7 @@ import { parseNoteName, parseNoteWithOctave, BARITONE, pcName } from "../notes";
 import { validateVoicing, generateVoicings, parseFretString, Fret } from "../voicings";
 import { identifyChord } from "../identify";
 import { applyChordEdits, parseSong } from "../song-parser";
+import { estimateBeats } from "../rhythm";
 import { detectKey, romanNumeral } from "../key-detect";
 import { optimizeProgression } from "../optimizer";
 
@@ -439,6 +440,34 @@ describe("edición de acordes de la canción", () => {
     });
     expect(errors.length).toBe(1);
     expect(edited.occurrences[0].chord.normalized).toBe("E");
+  });
+});
+
+describe("ritmo", () => {
+  it("anotaciones explícitas E*2 definen la duración", () => {
+    const parsed = parseSong("C*4  G*2  Am  F\nletra de prueba aquí va");
+    expect(parsed.occurrences.map((o) => o.chord.normalized)).toEqual(["C", "G", "Am", "F"]);
+    const beats = estimateBeats(parsed, "uniform");
+    expect(beats[0]).toBe(4);
+    expect(beats[1]).toBe(2);
+    expect(beats[2]).toBe(1);
+  });
+
+  it("modo layout: un acorde que abarca más letra dura más", () => {
+    const parsed = parseSong(
+      "C               G   Am  F\nuna letra bien larga acá va",
+    );
+    const beats = estimateBeats(parsed, "layout");
+    // C abarca mucho más texto que G y Am
+    expect(beats[0]).toBeGreaterThan(beats[1]);
+    expect(beats[1]).toBeGreaterThanOrEqual(0.5);
+    // cuantizado a medios tiempos
+    for (const b of beats) expect(b * 2).toBe(Math.round(b * 2));
+  });
+
+  it("modo uniforme: todos iguales salvo anotaciones", () => {
+    const parsed = parseSong("C        G  Am\nletra de prueba aquí");
+    expect(estimateBeats(parsed, "uniform")).toEqual([1, 1, 1]);
   });
 });
 
