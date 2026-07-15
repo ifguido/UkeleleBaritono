@@ -190,7 +190,10 @@ export default function ChordPanel({
 
   return (
     <aside className="space-y-4 rounded-xl border border-stone-200 bg-white p-4">
-      <div>
+      {/* Grilla arriba: siempre visible en desktop. En mobile la cubre la tira superior. */}
+      <div className="hidden lg:block">{grid}</div>
+
+      <div className="lg:border-t lg:border-stone-200 lg:pt-4">
         <div className="mb-1 flex items-center justify-between">
           <div className="flex items-baseline gap-2">
             <h2 className="text-xl font-bold">{selectedSymbol}</h2>
@@ -337,9 +340,6 @@ export default function ChordPanel({
           ))}
         </div>
       </div>
-
-      {/* Grilla completa: siempre visible para saltar a otro acorde */}
-      <div className="border-t border-stone-200 pt-4">{grid}</div>
     </aside>
   );
 }

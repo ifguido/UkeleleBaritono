@@ -21,6 +21,7 @@ import { SavedSong, deleteSong, listSongs, saveSong } from "@/lib/storage";
 import AdvancedSettings, { Settings } from "@/components/AdvancedSettings";
 import SongView, { OccurrenceRange } from "@/components/SongView";
 import ChordPanel from "@/components/ChordPanel";
+import ChordStrip from "@/components/ChordStrip";
 import ChordDiagram from "@/components/ChordDiagram";
 import { difficultyLabel } from "@/components/VoicingCard";
 
@@ -55,6 +56,7 @@ export default function HomePage() {
   const [rangeMode, setRangeMode] = useState(false);
   const [range, setRange] = useState<OccurrenceRange | null>(null);
   const [bpm, setBpm] = useState(90);
+  const [editorOpen, setEditorOpen] = useState(true);
   const [rhythm, setRhythm] = useState<RhythmMode>("layout");
   const [beatsOverrides, setBeatsOverrides] = useState<Record<number, number>>({});
   const playingRef = useRef<{ cancel: () => void } | null>(null);
@@ -138,7 +140,7 @@ export default function HomePage() {
           return;
         }
         setInput(data.text);
-        runOptimize(data.text, settings, {}, EMPTY_EDITS);
+        if (runOptimize(data.text, settings, {}, EMPTY_EDITS)) setEditorOpen(false);
       } catch {
         setError(
           "No pude importar esa página automáticamente. Copiá el texto de la canción y pegalo acá: la entrada manual siempre funciona.",
@@ -148,7 +150,7 @@ export default function HomePage() {
       }
       return;
     }
-    runOptimize(text, settings, {}, EMPTY_EDITS);
+    if (runOptimize(text, settings, {}, EMPTY_EDITS)) setEditorOpen(false);
   };
 
   const handleSettingsChange = (s: Settings) => {
@@ -322,7 +324,7 @@ export default function HomePage() {
     setBpm(s.bpm ?? 90);
     setRhythm((s.rhythm as RhythmMode) ?? "layout");
     setBeatsOverrides(s.beatsOverrides ?? {});
-    runOptimize(s.text, loaded, s.locks, s.edits ?? EMPTY_EDITS);
+    if (runOptimize(s.text, loaded, s.locks, s.edits ?? EMPTY_EDITS)) setEditorOpen(false);
   };
 
   const optimizedMap = useMemo(() => {
@@ -388,40 +390,59 @@ export default function HomePage() {
             </p>
           </div>
         )}
-        <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            rows={result ? 4 : 10}
-            placeholder={`Pegá acá tu canción o una URL…\n\nE        F#m       C#m\nAlguna letra por aquí\n\nTambién sirve una progresión suelta: E F#m C#m B7`}
-            className="w-full resize-y rounded-lg border border-stone-200 bg-stone-50 p-3 font-mono text-sm outline-none focus:border-teal-600"
-          />
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <button
-              onClick={handleOptimize}
-              disabled={busy || !input.trim()}
-              className="rounded-lg bg-teal-700 px-5 py-2 font-medium text-white hover:bg-teal-800 disabled:opacity-40"
-            >
-              {busy ? "Importando…" : "Optimizar"}
-            </button>
-            {!result && (
-              <>
+
+        {result && !editorOpen ? (
+          // Editor colapsado: la canción ya se ve abajo, no hace falta el textarea.
+          <button
+            onClick={() => setEditorOpen(true)}
+            className="flex w-full items-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm text-stone-500 hover:border-teal-500 hover:text-stone-800"
+          >
+            <span>✎ Editar el texto de la canción o cambiar la URL</span>
+          </button>
+        ) : (
+          <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              rows={result ? 8 : 10}
+              placeholder={`Pegá acá tu canción o una URL…\n\nE        F#m       C#m\nAlguna letra por aquí\n\nTambién sirve una progresión suelta: E F#m C#m B7`}
+              className="w-full resize-y rounded-lg border border-stone-200 bg-stone-50 p-3 font-mono text-sm outline-none focus:border-teal-600"
+            />
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                onClick={handleOptimize}
+                disabled={busy || !input.trim()}
+                className="rounded-lg bg-teal-700 px-5 py-2 font-medium text-white hover:bg-teal-800 disabled:opacity-40"
+              >
+                {busy ? "Importando…" : result ? "Aplicar cambios" : "Optimizar"}
+              </button>
+              {result && (
                 <button
-                  onClick={() => setInput(DEMO)}
+                  onClick={() => setEditorOpen(false)}
                   className="text-sm text-stone-500 underline-offset-2 hover:underline"
                 >
-                  Probar con un ejemplo
+                  Cancelar
                 </button>
-                <span className="ml-auto text-sm text-stone-400">
-                  ¿Solo querés ver un acorde?{" "}
-                  <Link href="/explorador" className="text-teal-700 hover:underline">
-                    Explorá sus posiciones →
-                  </Link>
-                </span>
-              </>
-            )}
+              )}
+              {!result && (
+                <>
+                  <button
+                    onClick={() => setInput(DEMO)}
+                    className="text-sm text-stone-500 underline-offset-2 hover:underline"
+                  >
+                    Probar con un ejemplo
+                  </button>
+                  <span className="ml-auto text-sm text-stone-400">
+                    ¿Solo querés ver un acorde?{" "}
+                    <Link href="/explorador" className="text-teal-700 hover:underline">
+                      Explorá sus posiciones →
+                    </Link>
+                  </span>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
         {error && (
           <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
             {error}
@@ -580,6 +601,13 @@ export default function HomePage() {
           {/* Mesa de trabajo: canción + panel de acordes en la misma pantalla */}
           <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="min-w-0 space-y-5">
+          {/* Mobile: tira de acordes fija arriba, en orden de la canción */}
+          <ChordStrip
+            result={result}
+            songKey={songKey}
+            selectedSymbol={selected?.occurrence.chord.normalized ?? null}
+            onSelect={selectAndPlay}
+          />
           {rangeMode && (
             <div className="no-print sticky top-2 z-40 flex flex-wrap items-center gap-3 rounded-lg border border-teal-300 bg-teal-50 px-4 py-2.5 text-sm text-teal-900 shadow-sm">
               {range === null && <span>Tocá el <strong>primer acorde</strong> de la parte que querés escuchar.</span>}
@@ -658,10 +686,10 @@ export default function HomePage() {
           </div>
 
           <div
-            className={`no-print lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:overscroll-contain ${
+            className={`no-print lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:overscroll-contain ${
               selected
                 ? "max-lg:fixed max-lg:inset-x-2 max-lg:bottom-2 max-lg:z-50 max-lg:max-h-[70vh] max-lg:overflow-y-auto max-lg:overscroll-contain max-lg:rounded-xl max-lg:shadow-2xl"
-                : ""
+                : "max-lg:hidden"
             }`}
           >
             <ChordPanel
