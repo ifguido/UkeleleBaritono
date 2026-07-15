@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { DetectedKey, romanNumeral } from "@/lib/engine/key-detect";
 import { OptimizeResult, OptimizedOccurrence } from "@/lib/engine/optimizer";
 import ChordDiagram from "./ChordDiagram";
@@ -19,6 +20,14 @@ interface Props {
  * el botón "Editar" abre la vista de trabajo.
  */
 export default function ChordStrip({ result, songKey, selected, onSelect, onOpenWorkbench }: Props) {
+  const activeRef = useRef<HTMLButtonElement | null>(null);
+
+  // Al seleccionar un acorde (desde la letra o donde sea), la tira se desplaza
+  // horizontalmente para mostrar la card correspondiente.
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [selected?.occurrence.index]);
+
   const cards = [...result.chordShapes.entries()].flatMap(([symbol, voicings]) =>
     voicings.map((v) => {
       const first = result.occurrences.find(
@@ -43,6 +52,7 @@ export default function ChordStrip({ result, songKey, selected, onSelect, onOpen
           return (
             <button
               key={symbol + voicing.display}
+              ref={active ? activeRef : null}
               onClick={() => onSelect(first.occurrence.index)}
               className={`flex shrink-0 flex-col items-center rounded-lg border px-2 py-1 transition-colors ${
                 active ? "border-teal-600 bg-teal-50 ring-1 ring-teal-600" : "border-stone-200 bg-white"
