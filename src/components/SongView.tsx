@@ -45,7 +45,7 @@ export default function SongView({
     range !== null && index >= range.start && index <= range.end;
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white p-4">
+    <div data-song-scroll className="overflow-x-auto rounded-lg border border-stone-200 bg-white p-4">
       <pre className="font-mono text-[13px] leading-6 text-stone-800">
         {song.lines.map((line, i) => {
           if (line.type === "blank") return <div key={i}>&nbsp;</div>;

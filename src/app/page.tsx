@@ -22,6 +22,7 @@ import AdvancedSettings, { Settings } from "@/components/AdvancedSettings";
 import SongView, { OccurrenceRange } from "@/components/SongView";
 import ChordPanel from "@/components/ChordPanel";
 import ChordStrip from "@/components/ChordStrip";
+import ChordWorkbench from "@/components/ChordWorkbench";
 import ChordDiagram from "@/components/ChordDiagram";
 import { difficultyLabel } from "@/components/VoicingCard";
 
@@ -55,6 +56,7 @@ export default function HomePage() {
   const [currentSongId, setCurrentSongId] = useState<string | null>(null);
   const [rangeMode, setRangeMode] = useState(false);
   const [range, setRange] = useState<OccurrenceRange | null>(null);
+  const [workbench, setWorkbench] = useState<{ index: number; editing: boolean } | null>(null);
   const [bpm, setBpm] = useState(90);
   const [editorOpen, setEditorOpen] = useState(true);
   const [rhythm, setRhythm] = useState<RhythmMode>("layout");
@@ -265,11 +267,40 @@ export default function HomePage() {
     );
   };
 
-  const selectAndPlay = (index: number) => {
+  const scrollToOccurrence = (index: number) => {
+    if (typeof window === "undefined") return;
+    requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLElement>(`[data-occ="${index}"]`);
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      // Vertical: centrar el acorde algo por encima del medio, libre de la tira fija.
+      const y = window.scrollY + rect.top - window.innerHeight * 0.4;
+      window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+      // Horizontal: si la línea es más ancha que la pantalla, centrar el acorde
+      // dentro de su contenedor con scroll.
+      const container = el.closest<HTMLElement>("[data-song-scroll]");
+      if (container && container.scrollWidth > container.clientWidth) {
+        const cRect = container.getBoundingClientRect();
+        const left =
+          container.scrollLeft + (rect.left - cRect.left) - container.clientWidth / 2 + rect.width / 2;
+        container.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
+      }
+    });
+  };
+
+  const selectAndPlay = (index: number, scroll = false) => {
     setSelectedOcc(index);
-    // Al elegir un acorde, sonar su voicing: se ve y se escucha en el panel.
+    // Al elegir un acorde, sonar su voicing: se ve y se escucha.
     const occ = result?.occurrences.find((o) => o.occurrence.index === index);
     if (occ) playChord(occ.voicing.midiNotes);
+    if (scroll) scrollToOccurrence(index);
+  };
+
+  const openWorkbench = (index: number, editing: boolean) => {
+    setSelectedOcc(index);
+    const occ = result?.occurrences.find((o) => o.occurrence.index === index);
+    if (occ) playChord(occ.voicing.midiNotes);
+    setWorkbench({ index, editing });
   };
 
   const handleChordClick = (index: number) => {
@@ -605,8 +636,9 @@ export default function HomePage() {
           <ChordStrip
             result={result}
             songKey={songKey}
-            selectedSymbol={selected?.occurrence.chord.normalized ?? null}
-            onSelect={selectAndPlay}
+            selected={selected}
+            onSelect={(i) => selectAndPlay(i, true)}
+            onOpenWorkbench={openWorkbench}
           />
           {rangeMode && (
             <div className="no-print sticky top-2 z-40 flex flex-wrap items-center gap-3 rounded-lg border border-teal-300 bg-teal-50 px-4 py-2.5 text-sm text-teal-900 shadow-sm">
@@ -685,30 +717,38 @@ export default function HomePage() {
           <AdvancedSettings settings={settings} onChange={handleSettingsChange} />
           </div>
 
-          <div
-            className={`no-print lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:overscroll-contain ${
-              selected
-                ? "max-lg:fixed max-lg:inset-x-2 max-lg:bottom-2 max-lg:z-50 max-lg:max-h-[70vh] max-lg:overflow-y-auto max-lg:overscroll-contain max-lg:rounded-xl max-lg:shadow-2xl"
-                : "max-lg:hidden"
-            }`}
-          >
+          <div className="no-print hidden lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:overscroll-contain">
             <ChordPanel
-              song={song}
               result={result}
               songKey={songKey}
               selected={selected}
-              locks={locks}
               onSelectOccurrence={selectAndPlay}
-              onApply={handleApply}
-              onClearLocks={handleClearLocks}
-              onEditChord={handleEditChord}
-              onRevertEdit={handleRevertEdit}
-              selectedBeats={selectedOcc !== null ? beatsByOccurrence[selectedOcc] : undefined}
-              onSetBeats={handleSetBeats}
-              onClose={() => setSelectedOcc(null)}
+              onOpenWorkbench={openWorkbench}
             />
           </div>
           </div>
+
+          {workbench &&
+            (() => {
+              const occ = optimizedMap.get(workbench.index);
+              if (!occ) return null;
+              return (
+                <ChordWorkbench
+                  working={occ}
+                  songKey={songKey}
+                  locks={locks}
+                  result={result}
+                  beats={beatsByOccurrence[workbench.index] ?? 1}
+                  startEditing={workbench.editing}
+                  onApply={handleApply}
+                  onClearLocks={handleClearLocks}
+                  onEditChord={handleEditChord}
+                  onRevertEdit={handleRevertEdit}
+                  onSetBeats={handleSetBeats}
+                  onClose={() => setWorkbench(null)}
+                />
+              );
+            })()}
         </>
       )}
     </div>

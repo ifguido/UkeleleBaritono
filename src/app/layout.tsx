@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
@@ -17,6 +17,14 @@ export const metadata: Metadata = {
   title: "Baritone Chords",
   description:
     "Adaptá canciones al ukelele barítono (D-G-B-E): posiciones correctas, diagramas y arreglos optimizados.",
+};
+
+// Evita el zoom automático de iOS al enfocar inputs y el pinch-zoom.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

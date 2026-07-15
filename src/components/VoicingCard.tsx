@@ -22,7 +22,7 @@ export default function VoicingCard({ symbol, voicing, highlight, compact, foote
   const diff = difficultyLabel(voicing.difficulty);
   return (
     <div
-      className={`flex flex-col rounded-lg border bg-white p-3 ${
+      className={`flex h-full flex-col rounded-lg border bg-white p-3 ${
         highlight ? "border-teal-600 ring-1 ring-teal-600" : "border-stone-200"
       }`}
     >
@@ -45,7 +45,7 @@ export default function VoicingCard({ symbol, voicing, highlight, compact, foote
         </div>
       </div>
 
-      <div className="my-1 self-center">
+      <div className="my-1 flex min-h-28 items-center justify-center">
         <ChordDiagram frets={voicing.frets} barre={voicing.barre} size={compact ? "sm" : "lg"} />
       </div>
 
@@ -75,7 +75,7 @@ export default function VoicingCard({ symbol, voicing, highlight, compact, foote
         )}
       </div>
 
-      <div className="no-print mt-2 flex gap-2">
+      <div className="no-print mt-auto flex gap-2 pt-2">
         <button
           onClick={() => playChord(voicing.midiNotes)}
           className="rounded border border-stone-300 px-2 py-1 text-xs text-stone-700 hover:bg-stone-100"

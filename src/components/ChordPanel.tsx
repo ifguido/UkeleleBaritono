@@ -1,344 +1,79 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { parseChordFlexible } from "@/lib/engine/chords";
 import { DetectedKey, romanNumeral } from "@/lib/engine/key-detect";
 import { OptimizeResult, OptimizedOccurrence } from "@/lib/engine/optimizer";
-import { ParsedSong } from "@/lib/engine/song-parser";
-import { Voicing } from "@/lib/engine/voicings";
-import { playArpeggio, playChord } from "@/lib/audio/synth";
 import ChordDiagram from "./ChordDiagram";
-import { difficultyLabel } from "./VoicingCard";
 
 interface Props {
-  song: ParsedSong;
   result: OptimizeResult;
   songKey: DetectedKey | null;
   selected: OptimizedOccurrence | null;
-  locks: Record<number, string>;
   onSelectOccurrence: (index: number) => void;
-  onApply: (occurrenceIndex: number, display: string, wholeSong: boolean) => void;
-  onClearLocks: (symbol: string) => void;
-  onEditChord: (occurrenceIndex: number, newSymbol: string, wholeSong: boolean) => void;
-  onRevertEdit: (occurrenceIndex: number) => void;
-  /** Duración en tiempos de la ocurrencia seleccionada. */
-  selectedBeats?: number;
-  onSetBeats: (occurrenceIndex: number, beats: number) => void;
-  onClose: () => void;
-}
-
-function MiniVoicing({
-  voicing,
-  active,
-  onUseEverywhere,
-  onUseHere,
-}: {
-  voicing: Voicing;
-  active?: boolean;
-  onUseEverywhere?: () => void;
-  onUseHere?: () => void;
-}) {
-  const diff = difficultyLabel(voicing.difficulty);
-  return (
-    <div
-      className={`flex flex-col items-center rounded-lg border p-2 ${
-        active ? "border-teal-600 bg-teal-50/60 ring-1 ring-teal-600" : "border-stone-200 bg-white"
-      }`}
-    >
-      <span className={`self-start rounded px-1 text-[10px] font-medium ${diff.className}`}>
-        {voicing.difficulty}
-      </span>
-      <button
-        onClick={() => playChord(voicing.midiNotes)}
-        title="Escuchar esta posición"
-        className="w-full"
-      >
-        <ChordDiagram frets={voicing.frets} barre={voicing.barre} size="sm" />
-      </button>
-      <span className="font-mono text-[11px] text-stone-600">{voicing.display}</span>
-      {voicing.omitted.length > 0 && (
-        <span className="text-center text-[10px] font-medium text-orange-700">
-          omite {voicing.omitted.map((o) => o.split(" ")[0]).join(", ")}
-        </span>
-      )}
-      {voicing.bassDegree !== "1" && (
-        <span className="text-center text-[10px] text-stone-400">{voicing.inversion}</span>
-      )}
-      {!active && onUseEverywhere && (
-        <div className="mt-1.5 flex w-full flex-col gap-1">
-          <button
-            onClick={onUseEverywhere}
-            className="rounded bg-teal-700 px-1 py-0.5 text-[11px] font-medium text-white hover:bg-teal-800"
-          >
-            Usar en toda la canción
-          </button>
-          <button
-            onClick={onUseHere}
-            className="rounded border border-stone-300 px-1 py-0.5 text-[11px] text-stone-600 hover:bg-stone-100"
-          >
-            Solo aquí
-          </button>
-        </div>
-      )}
-      {active && <span className="mt-1 text-[10px] font-medium text-teal-700">posición actual</span>}
-    </div>
-  );
+  onOpenWorkbench: (index: number, editing: boolean) => void;
 }
 
 export default function ChordPanel({
-  song,
   result,
   songKey,
   selected,
-  locks,
   onSelectOccurrence,
-  onApply,
-  onClearLocks,
-  onEditChord,
-  onRevertEdit,
-  selectedBeats,
-  onSetBeats,
-  onClose,
+  onOpenWorkbench,
 }: Props) {
   const selectedSymbol = selected?.occurrence.chord.normalized ?? "";
-  const selectedIndex = selected?.occurrence.index ?? -1;
-  const [editValue, setEditValue] = useState(selectedSymbol);
-  const [editError, setEditError] = useState<string | null>(null);
-  const [editOpen, setEditOpen] = useState(false);
 
-  useEffect(() => {
-    setEditValue(selectedSymbol);
-    setEditError(null);
-    setEditOpen(false);
-  }, [selectedSymbol, selectedIndex]);
-
-  const applyEdit = (wholeSong: boolean) => {
-    const value = editValue.trim();
-    if (!value || !selected) return;
-    if (value === selectedSymbol) return;
-    const parsed = parseChordFlexible(value);
-    if (!parsed.ok) {
-      setEditError(parsed.error.message);
-      return;
-    }
-    setEditError(null);
-    onEditChord(selected.occurrence.index, value, wholeSong);
-  };
-
-  // Grilla de todos los acordes de la canción — siempre visible, para no
-  // perder la vista general al abrir el detalle de uno.
-  const grid = (
-    <div>
+  return (
+    <aside className="rounded-xl border border-stone-200 bg-white p-4">
       <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-stone-500">
         Acordes de la canción
       </h2>
       <div className="grid grid-cols-3 gap-2">
-        {[...result.chordShapes.entries()].map(([symbol, voicings]) => {
-          const occurrences = result.occurrences.filter(
-            (o) => o.occurrence.chord.normalized === symbol,
-          );
-          const first = occurrences[0];
-          const roman = songKey ? romanNumeral(first.occurrence.chord, songKey) : null;
-          const active = symbol === selectedSymbol;
-          return (
-            <button
-              key={symbol}
-              onClick={() => onSelectOccurrence(first.occurrence.index)}
-              className={`flex flex-col items-center rounded-lg border p-2 transition-colors ${
-                active
-                  ? "border-teal-600 bg-teal-50 ring-1 ring-teal-600"
-                  : "border-stone-200 bg-white hover:border-teal-500 hover:bg-teal-50/40"
-              }`}
-            >
-              <div className="flex items-baseline gap-1">
-                <span className="text-sm font-bold">{symbol}</span>
-                {roman && <span className="text-[10px] text-stone-400">{roman}</span>}
-              </div>
-              <ChordDiagram frets={voicings[0].frets} barre={voicings[0].barre} size="sm" />
-              <span className="font-mono text-[10px] text-stone-500">
-                {voicings[0].display}
-                {voicings.length > 1 && ` +${voicings.length - 1}`}
-              </span>
-              <span className="text-[10px] text-stone-400">×{occurrences.length}</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  // Sin selección: solo la grilla.
-  if (!selected) {
-    return (
-      <aside className="rounded-xl border border-stone-200 bg-white p-4">
-        {grid}
-        <p className="mt-3 text-xs text-stone-400">
-          Tocá un acorde (acá o en la letra) para escucharlo y ver sus posiciones.
-        </p>
-      </aside>
-    );
-  }
-
-  // Con selección: detalle del acorde + la grilla completa debajo.
-  const occurrencesOfSymbol = result.occurrences.filter(
-    (o) => o.occurrence.chord.normalized === selectedSymbol,
-  );
-  const symbolHasLocks = occurrencesOfSymbol.some((o) => locks[o.occurrence.index]);
-  const roman = songKey ? romanNumeral(selected.occurrence.chord, songKey) : null;
-  const isDiatonic = songKey ? !songKey.nonDiatonic.includes(selectedSymbol) : true;
-  const v = selected.voicing;
-
-  return (
-    <aside className="space-y-4 rounded-xl border border-stone-200 bg-white p-4">
-      {/* Grilla arriba: siempre visible en desktop. En mobile la cubre la tira superior. */}
-      <div className="hidden lg:block">{grid}</div>
-
-      <div className="lg:border-t lg:border-stone-200 lg:pt-4">
-        <div className="mb-1 flex items-center justify-between">
-          <div className="flex items-baseline gap-2">
-            <h2 className="text-xl font-bold">{selectedSymbol}</h2>
-            {roman && (
-              <span
-                className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
-                  isDiatonic ? "bg-stone-100 text-stone-600" : "bg-purple-100 text-purple-800"
+        {[...result.chordShapes.entries()].flatMap(([symbol, voicings]) =>
+          voicings.map((v) => {
+            // Ocurrencias que usan EXACTAMENTE esta posición (no todo el símbolo):
+            // así cada variación aparece con su digitación real.
+            const occurrences = result.occurrences.filter(
+              (o) => o.occurrence.chord.normalized === symbol && o.voicing.display === v.display,
+            );
+            const first = occurrences[0];
+            if (!first) return null;
+            const roman = songKey ? romanNumeral(first.occurrence.chord, songKey) : null;
+            const active =
+              symbol === selectedSymbol && selected?.voicing.display === v.display;
+            const multiple = voicings.length > 1;
+            return (
+              <div
+                key={symbol + v.display}
+                className={`flex flex-col items-center rounded-lg border p-2 transition-colors ${
+                  active ? "border-teal-600 bg-teal-50 ring-1 ring-teal-600" : "border-stone-200 bg-white"
                 }`}
-                title={isDiatonic ? "Acorde de la tonalidad" : "Fuera de la tonalidad (color prestado)"}
               >
-                {roman}
-                {!isDiatonic && " · prestado"}
-              </span>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            title="Cerrar detalle"
-            className="rounded px-2 py-0.5 text-sm text-stone-400 hover:bg-stone-100"
-          >
-            ✕
-          </button>
-        </div>
-        <p className="mb-3 text-xs text-stone-500">
-          Aparece ×{occurrencesOfSymbol.length} en la canción · {selected.reason}
-        </p>
+                {/* Cuerpo: clic = escuchar y resaltar esta variación (no abre nada) */}
+                <button
+                  onClick={() => onSelectOccurrence(first.occurrence.index)}
+                  className="flex flex-col items-center"
+                  title="Escuchar y resaltar en la letra"
+                >
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-sm font-bold">{symbol}</span>
+                    {roman && <span className="text-[10px] text-stone-400">{roman}</span>}
+                  </div>
+                  <ChordDiagram frets={v.frets} barre={v.barre} size="sm" />
+                  <span className="font-mono text-[10px] text-stone-500">{v.display}</span>
+                  <span className="text-[10px] text-stone-400">
+                    {multiple ? `esta forma ×${occurrences.length}` : `×${occurrences.length}`}
+                  </span>
+                </button>
 
-        {/* Posición actual */}
-        <div className="mb-3 flex items-center gap-3 rounded-lg border border-teal-600 bg-teal-50/40 p-3">
-          <ChordDiagram frets={v.frets} barre={v.barre} size="lg" />
-          <div className="min-w-0 flex-1 space-y-0.5 text-xs text-stone-600">
-            <div className="font-mono text-sm font-semibold text-stone-800">{v.display}</div>
-            <div>{v.noteNames.join(" ")}</div>
-            <div>
-              Bajo {v.bassNote} · {v.inversion}
-            </div>
-            {v.omitted.length > 0 && (
-              <div className="font-medium text-orange-700">Omite {v.omitted.join(", ")}</div>
-            )}
-            <div className="flex gap-1.5 pt-1">
-              <button
-                onClick={() => playChord(v.midiNotes)}
-                className="rounded border border-teal-600 px-2 py-0.5 text-teal-800 hover:bg-teal-600 hover:text-white"
-              >
-                ▶ Rasgueo
-              </button>
-              <button
-                onClick={() => playArpeggio(v.midiNotes)}
-                className="rounded border border-stone-300 px-2 py-0.5 text-stone-600 hover:bg-stone-100"
-              >
-                ♪ Arpegio
-              </button>
-            </div>
-            {symbolHasLocks && (
-              <button
-                onClick={() => onClearLocks(selectedSymbol)}
-                className="pt-1 text-[11px] text-amber-700 underline-offset-2 hover:underline"
-              >
-                🔓 Volver a la elección automática
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Duración + editar símbolo (discreto) */}
-        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
-          <div className="flex items-center gap-1.5">
-            <span className="text-stone-500">Duración:</span>
-            <button
-              onClick={() => onSetBeats(selectedIndex, Math.max(0.5, (selectedBeats ?? 1) - 0.5))}
-              className="h-6 w-6 rounded border border-stone-300 text-stone-600 hover:bg-stone-100"
-            >
-              −
-            </button>
-            <span className="w-14 text-center font-mono text-sm text-stone-800">
-              {selectedBeats ?? 1} {(selectedBeats ?? 1) === 1 ? "tiempo" : "tiempos"}
-            </span>
-            <button
-              onClick={() => onSetBeats(selectedIndex, Math.min(8, (selectedBeats ?? 1) + 0.5))}
-              className="h-6 w-6 rounded border border-stone-300 text-stone-600 hover:bg-stone-100"
-            >
-              +
-            </button>
-          </div>
-          <button
-            onClick={() => setEditOpen((o) => !o)}
-            className="text-stone-500 underline-offset-2 hover:text-stone-800 hover:underline"
-          >
-            ✎ Cambiar acorde
-          </button>
-        </div>
-
-        {editOpen && (
-          <div className="mb-3 rounded-lg border border-stone-200 bg-stone-50/60 p-2.5">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <input
-                autoFocus
-                value={editValue}
-                onChange={(e) => {
-                  setEditValue(e.target.value);
-                  setEditError(null);
-                }}
-                onKeyDown={(e) => e.key === "Enter" && applyEdit(true)}
-                className="w-24 rounded border border-stone-300 bg-white px-2 py-1 font-mono text-sm outline-none focus:border-teal-600"
-              />
-              <button
-                onClick={() => applyEdit(true)}
-                disabled={editValue.trim() === selectedSymbol || !editValue.trim()}
-                className="rounded bg-teal-700 px-2 py-1 text-xs font-medium text-white hover:bg-teal-800 disabled:opacity-40"
-              >
-                Todos los {selected.occurrence.originalSymbol ?? selectedSymbol}
-              </button>
-              <button
-                onClick={() => applyEdit(false)}
-                disabled={editValue.trim() === selectedSymbol || !editValue.trim()}
-                className="rounded border border-stone-300 px-2 py-1 text-xs text-stone-600 hover:bg-stone-100 disabled:opacity-40"
-              >
-                Solo aquí
-              </button>
-            </div>
-            {editError && <p className="mt-1 text-xs text-rose-700">{editError}</p>}
-            {selected.occurrence.originalSymbol && (
-              <button
-                onClick={() => onRevertEdit(selected.occurrence.index)}
-                className="mt-1.5 text-xs text-amber-700 underline-offset-2 hover:underline"
-              >
-                ↩ Volver al original ({selected.occurrence.originalSymbol})
-              </button>
-            )}
-          </div>
+                <button
+                  onClick={() => onOpenWorkbench(first.occurrence.index, true)}
+                  className="mt-1.5 w-full rounded border border-stone-200 py-1 text-[10px] text-stone-500 hover:border-teal-500 hover:text-teal-700"
+                >
+                  Editar acorde
+                </button>
+              </div>
+            );
+          }),
         )}
-
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
-          Otras posiciones válidas
-        </h3>
-        <div className="grid grid-cols-2 gap-2">
-          {selected.alternatives.map((alt) => (
-            <MiniVoicing
-              key={alt.display}
-              voicing={alt}
-              onUseEverywhere={() => onApply(selected.occurrence.index, alt.display, true)}
-              onUseHere={() => onApply(selected.occurrence.index, alt.display, false)}
-            />
-          ))}
-        </div>
       </div>
     </aside>
   );
