@@ -50,8 +50,14 @@ export default function RootLayout({
               <Link href="/explorador" className="hover:text-stone-900">
                 Explorador
               </Link>
+              <Link href="/escalas" className="hover:text-stone-900">
+                Escalas
+              </Link>
               <Link href="/identificador" className="hover:text-stone-900">
                 Identificador
+              </Link>
+              <Link href="/afinador" className="hover:text-stone-900">
+                Afinador
               </Link>
             </div>
             <span className="ml-auto hidden text-xs text-stone-400 sm:block">

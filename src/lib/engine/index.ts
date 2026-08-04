@@ -6,3 +6,7 @@ export * from "./song-parser";
 export * from "./key-detect";
 export * from "./optimizer";
 export * from "./rhythm";
+export * from "./scales";
+export * from "./scale-fretboard";
+export * from "./scale-harmony";
+export * from "./scale-patterns";

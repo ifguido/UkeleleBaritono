@@ -166,6 +166,14 @@ function audioContext(): AudioContext {
   return ctx;
 }
 
+/**
+ * El AudioContext de la app. El afinador lo comparte con el sintetizador:
+ * iOS se pone incómodo con varios contextos abiertos a la vez.
+ */
+export function sharedAudioContext(): AudioContext {
+  return audioContext();
+}
+
 /** Fallback: sintetiza (y cachea) la pulsación de una nota con Karplus–Strong. */
 function ksBuffer(ac: AudioContext, midi: Midi): AudioBuffer {
   const cached = ksCache.get(midi);
@@ -322,6 +330,45 @@ export function playArpeggio(midiNotes: Midi[], noteMs = 320): void {
     const start = ac.currentTime + 0.02;
     midiNotes.forEach((midi, i) => scheduleNote(ac, target, midi, start + (i * noteMs) / 1000, 0.6));
   });
+}
+
+/**
+ * Melodía: una nota por vez, con aviso a la UI para ir marcando cuál suena.
+ * A diferencia del arpegio, se puede cortar en cualquier momento — es lo que
+ * usan las escalas, donde una secuencia puede durar varios segundos.
+ */
+export function playMelody(
+  midiNotes: Midi[],
+  noteMs = 220,
+  onNote?: (index: number) => void,
+): { cancel: () => void; totalMs: number } {
+  const ac = audioContext();
+  const timers: ReturnType<typeof setTimeout>[] = [];
+  let target: Scheduled | null = null;
+  let cancelled = false;
+  const totalMs = midiNotes.length * noteMs + 500;
+
+  whenSamplesReady(() => {
+    if (cancelled) return;
+    target = createBus(ac);
+    const start = ac.currentTime + 0.05;
+    midiNotes.forEach((midi, i) => {
+      const when = start + (i * noteMs) / 1000;
+      scheduleNote(ac, target!, midi, when, 0.62);
+      if (onNote) {
+        timers.push(setTimeout(() => onNote(i), Math.max(0, (when - ac.currentTime) * 1000)));
+      }
+    });
+  });
+
+  return {
+    cancel: () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+      if (target) stopScheduled(ac, target);
+    },
+    totalMs,
+  };
 }
 
 /**
