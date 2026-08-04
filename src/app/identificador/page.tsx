@@ -1,90 +1,73 @@
-"use client";
+import type { Metadata } from "next";
+import Link from "next/link";
+import FinderClient from "./FinderClient";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import { JsonLd, howToSchema } from "@/lib/seo/jsonld";
+import { pageMetadata } from "@/lib/seo/metadata";
 
-import { useMemo, useState } from "react";
-import { identifyChord } from "@/lib/engine/identify";
-import { parseFretString } from "@/lib/engine/voicings";
-import ChordDiagram from "@/components/ChordDiagram";
-import { playChord } from "@/lib/audio/synth";
+export const metadata: Metadata = pageMetadata({
+  title: "Identificador de acordes por digitación",
+  description:
+    "¿Qué acorde estás tocando? Escribí los trastes que pisás en el ukelele barítono (D–G–B–E) y te digo " +
+    "qué acorde es, con sus nombres alternativos e inversiones.",
+  path: "/identificador",
+});
 
-export default function FinderPage() {
-  const [input, setInput] = useState("2-1-0-0");
+const STEPS = [
+  {
+    name: "Contá los trastes de cada cuerda",
+    text:
+      "Mirá qué traste pisás en cada cuerda, de la más grave (Re) a la más aguda (Mi). Una cuerda al aire " +
+      "es 0 y una cuerda que no suena es x.",
+  },
+  {
+    name: "Escribilos en orden D–G–B–E",
+    text:
+      "Anotá los cuatro valores separados por guiones, siempre de grave a aguda. Por ejemplo 2-1-0-0, o " +
+      "x-6-5-4 si la cuerda más grave queda silenciada.",
+  },
+  {
+    name: "Leé el resultado",
+    text:
+      "El identificador devuelve el acorde que forman esas notas. Si la misma combinación tiene más de una " +
+      "lectura válida, aparecen todas ordenadas por cuál es la interpretación más probable.",
+  },
+];
 
-  const frets = useMemo(() => parseFretString(input), [input]);
-  const result = useMemo(() => (frets ? identifyChord(frets) : null), [frets]);
-
+export default function Page() {
   return (
-    <div className="mx-auto max-w-2xl space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold">Identificador de digitaciones</h1>
-        <p className="text-sm text-stone-500">
-          Escribí los trastes en orden D–G–B–E (x = cuerda silenciada) y te digo qué acorde estás
-          tocando.
-        </p>
-      </div>
-
-      <div className="flex items-center gap-4">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="2-1-0-0 o x-6-5-4"
-          className="w-48 rounded-lg border border-stone-300 bg-white px-3 py-2 font-mono text-lg outline-none focus:border-teal-600"
-        />
-        {frets && result && result.matches.length > 0 && (
-          <button
-            onClick={() => playChord(result.matches[0].voicing.midiNotes)}
-            className="rounded-lg border border-teal-700 px-3 py-2 text-sm text-teal-800 hover:bg-teal-50"
-          >
-            ▶ Escuchar
-          </button>
+    <div className="space-y-8">
+      <Breadcrumbs trail={[{ name: "Identificador de digitaciones" }]} />
+      <JsonLd
+        schema={howToSchema(
+          "Cómo identificar un acorde de ukelele barítono a partir de la digitación",
+          "Tres pasos para saber qué acorde forma una posición cualquiera en la afinación D–G–B–E.",
+          STEPS,
         )}
-      </div>
+      />
 
-      {!frets && input.trim() && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-          Formato inválido. Usá cuatro valores separados por guiones, por ejemplo: 2-1-0-0 o x-6-5-4.
-        </div>
-      )}
+      <FinderClient />
 
-      {frets && result && (
-        <div className="flex flex-wrap items-start gap-6">
-          <div className="rounded-lg border border-stone-200 bg-white p-4">
-            <ChordDiagram frets={frets} size="lg" />
-            <p className="mt-1 text-center text-sm text-stone-500">
-              Notas: <span className="font-mono">{result.noteNames.join(" ") || "—"}</span>
-            </p>
-          </div>
-
-          <div className="min-w-64 flex-1 space-y-2">
-            {result.matches.length === 0 && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                Estas notas no forman ningún acorde que conozca. Puede ser un cluster o faltar una
-                nota que lo defina.
-              </div>
-            )}
-            {result.matches.slice(0, 8).map((m, i) => (
-              <div
-                key={m.symbol}
-                className={`rounded-lg border p-3 ${
-                  i === 0 ? "border-teal-600 bg-teal-50/50 ring-1 ring-teal-600" : "border-stone-200 bg-white"
-                }`}
-              >
-                <div className="flex items-baseline gap-2">
-                  <span className="text-lg font-bold">{m.symbol}</span>
-                  {i === 0 && <span className="text-xs font-medium text-teal-700">mejor interpretación</span>}
-                  <span className="ml-auto text-xs text-stone-400">
-                    confianza {(m.confidence * 100).toFixed(0)}%
-                  </span>
-                </div>
-                <div className="mt-1 text-xs text-stone-600">
-                  {m.exact ? "Acorde completo" : `Parcial — omite ${m.omitted.join(", ")}`}
-                  {" · "}
-                  {m.inversion}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <section className="no-print border-t border-stone-200 pt-8">
+        <h2 className="text-xl font-bold tracking-tight">Cómo anotar la digitación</h2>
+        <ol className="mt-3 max-w-3xl list-decimal space-y-2 pl-5 text-sm text-stone-600">
+          {STEPS.map((step) => (
+            <li key={step.name}>
+              <strong className="text-stone-800">{step.name}.</strong> {step.text}
+            </li>
+          ))}
+        </ol>
+        <p className="mt-4 max-w-3xl text-sm text-stone-600">
+          Un mismo puñado de notas puede tener más de un nombre según cuál consideres la fundamental: un
+          La menor séptima y un Do con sexta comparten las cuatro notas. Por eso el identificador muestra
+          las lecturas alternativas en vez de elegir una sola. Para el camino inverso —del nombre a la
+          posición— está el{" "}
+          <Link href="/acordes" className="text-teal-800 hover:underline">
+            diccionario de acordes
+          </Link>
+          .
+        </p>
+      </section>
     </div>
   );
 }

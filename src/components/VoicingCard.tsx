@@ -1,5 +1,6 @@
 "use client";
 
+import { difficultyLabel } from "@/lib/ui/difficulty";
 import { Voicing } from "@/lib/engine/voicings";
 import { playArpeggio, playChord } from "@/lib/audio/synth";
 import ChordDiagram from "./ChordDiagram";
@@ -12,11 +13,6 @@ interface Props {
   footer?: React.ReactNode;
 }
 
-export function difficultyLabel(d: number): { text: string; className: string } {
-  if (d <= 1.6) return { text: "fácil", className: "bg-emerald-100 text-emerald-800" };
-  if (d <= 3.2) return { text: "media", className: "bg-amber-100 text-amber-800" };
-  return { text: "difícil", className: "bg-rose-100 text-rose-800" };
-}
 
 export default function VoicingCard({ symbol, voicing, highlight, compact, footer }: Props) {
   const diff = difficultyLabel(voicing.difficulty);

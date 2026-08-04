@@ -60,7 +60,11 @@ function ChordCell({ chord, subtitle }: { chord: ScaleChord; subtitle?: string }
 }
 
 export default function ScaleChords({ scale }: { scale: Scale }) {
-  const [showAll, setShowAll] = useState(false);
+  // Abierto de entrada: la lista completa es justamente a lo que se viene a
+  // esta pestaña, y tenerla plegada obligaba a un segundo clic para ver lo que
+  // uno ya había pedido al entrar en «Acordes». Los diagramas de cada grado sí
+  // siguen plegados: desplegarlos todos son cientos de SVG de una sentada.
+  const [showAll, setShowAll] = useState(true);
   const [openDegree, setOpenDegree] = useState<number | null>(null);
 
   const home = useMemo(() => homeChord(scale), [scale]);
@@ -158,12 +162,17 @@ export default function ScaleChords({ scale }: { scale: Scale }) {
 
       {/* Todos los acordes compatibles */}
       <section>
-        <button
-          onClick={() => setShowAll((v) => !v)}
-          className="text-sm font-medium text-stone-600 underline-offset-2 hover:text-stone-900 hover:underline"
-        >
-          {showAll ? "▲ Ocultar" : "▼ Ver"} los {totalChords} acordes que entran enteros en la escala
-        </button>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">
+            Los {totalChords} acordes que entran enteros en la escala
+          </h3>
+          <button
+            onClick={() => setShowAll((v) => !v)}
+            className="text-xs text-stone-500 underline-offset-2 hover:text-stone-900 hover:underline"
+          >
+            {showAll ? "▲ Plegar" : "▼ Desplegar"}
+          </button>
+        </div>
         <p className="mt-1 text-sm text-stone-500">
           Todo acorde cuyas notas están todas en {scale.name}. Es la respuesta a &ldquo;¿sobre qué
           acordes puedo tocar esto?&rdquo;.

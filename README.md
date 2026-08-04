@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ukelele Barítono
 
-## Getting Started
+Acordes, escalas, afinador y adaptador de canciones para ukelele barítono en afinación **D–G–B–E**.
 
-First, run the development server:
+Todo lo musical se calcula desde los intervalos y se verifica nota por nota: no hay tablas de
+posiciones copiadas en ningún lado. Si un diagrama aparece, es porque el motor comprobó que contiene
+las notas que el acorde tiene que contener.
+
+## Desarrollo
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev     # http://localhost:3000
+npm test        # motor musical + integridad de las URLs
+npm run build   # genera las ~865 páginas estáticas
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Estructura
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+src/
+  app/                 Rutas (App Router, Next.js 16)
+    acordes/[slug]/      420 páginas de acorde
+    escalas/[slug]/      432 páginas de escala
+    sitemap.ts           858 URLs
+    robots.ts
+  components/          Vistas. ChordDiagram es server-safe a propósito:
+                       los diagramas tienen que estar en el HTML inicial.
+  lib/
+    engine/            Motor musical. Sin dependencias de React.
+    seo/               Metadatos, slugs, structured data.
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Convención de URLs
 
-## Learn More
+Las URLs de acorde y escala son **permanentes**: están indexadas, y cambiarlas cuesta posiciones.
+El mapeo vive en `src/lib/seo/slugs.ts` escrito a mano —no derivado de los nombres de la interfaz,
+que cambian cuando se ajusta un texto— y `src/lib/seo/__tests__/slugs.test.ts` comprueba las 852
+combinaciones una por una.
 
-To learn more about Next.js, take a look at the following resources:
+```
+/acordes/do-mayor              Do mayor        (C)
+/acordes/fa-sostenido-m7       Fa♯ menor 7ª    (F#m7)
+/escalas/la-pentatonica-menor  La pentatónica menor
+/escalas/do-mayor              Do mayor (jónico)
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Reglas:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- La nota va en cifra española, que es como se busca en castellano.
+- De cada par enarmónico hay **una sola** URL canónica; la otra grafía redirige con 308. `Re♭` no
+  compite contra `Do♯` por la misma consulta.
+- El sostenido se escribe `s` dentro de los sufijos (`7s9`, no `7#9`): `#` abre el fragmento de la
+  URL y nunca llegaría al servidor.
+- Los alias frecuentes (`do-m`, `la-menor-natural`, `do-jonico`) existen y redirigen al canónico.
 
-## Deploy on Vercel
+## Antes de tocar el SEO
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Ninguna página debe construir sus metadatos a mano: se usa `pageMetadata()`, que es lo que
+  garantiza que todas lleven canonical.
+- `openGraph` **se reemplaza entero**, no se fusiona, cuando una página lo declara. Por eso
+  `pageMetadata()` repite la imagen: sin eso, las páginas se comparten sin miniatura.
+- Al agregar una ruta fija, agregarla a `src/lib/seo/routes.ts`. De ahí leen la navegación, el pie y
+  el sitemap, así que no puede quedar una página enlazada pero ausente del sitemap.
+- `CONTENT_UPDATED_AT`, en `src/app/sitemap.ts`, se sube a mano cuando cambia el contenido. No es
+  `new Date()` a propósito: un `lastmod` que cambia en cada deploy sin cambiar nada enseña a Google
+  a ignorarlo.

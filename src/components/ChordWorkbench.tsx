@@ -7,7 +7,7 @@ import { OptimizeResult, OptimizedOccurrence } from "@/lib/engine/optimizer";
 import { Voicing } from "@/lib/engine/voicings";
 import { playArpeggio, playChord } from "@/lib/audio/synth";
 import ChordDiagram from "./ChordDiagram";
-import { difficultyLabel } from "./VoicingCard";
+import { difficultyLabel } from "@/lib/ui/difficulty";
 
 interface Props {
   working: OptimizedOccurrence;
