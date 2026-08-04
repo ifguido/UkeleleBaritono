@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -71,6 +72,7 @@ export default function RootLayout({
           Motor musical determinista: cada posición se valida nota por nota.
         </footer>
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
