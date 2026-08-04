@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -63,6 +64,7 @@ export default function RootLayout({
         <footer className="no-print border-t border-stone-200 py-4 text-center text-xs text-stone-400">
           Motor musical determinista: cada posición se valida nota por nota.
         </footer>
+        <Analytics />
       </body>
     </html>
   );
