@@ -5,6 +5,37 @@ import { LOCALE, SITE_NAME, absoluteUrl } from "./site";
 export const TITLE_SUFFIX = ` · ${SITE_NAME}`;
 
 /**
+ * Longitud máxima de la descripción.
+ *
+ * Google recorta por ancho en píxeles, no por caracteres, y el corte real ronda
+ * los 1000 px. 155 caracteres es el equivalente prudente: lo que se pase de ahí
+ * se sustituye por puntos suspensivos en el resultado, y lo que se pierde
+ * siempre es el final de la frase, que es donde suele estar la llamada a la
+ * acción.
+ */
+export const MAX_DESCRIPTION = 155;
+
+/**
+ * Arma una descripción con lo imprescindible y le añade los complementos que
+ * quepan, en orden de importancia.
+ *
+ * Hace falta porque las descripciones se generan: la de una escala cromática
+ * lista doce notas con dobles bemoles y se va a 224 caracteres, mientras que la
+ * de una tríada se queda corta. Recortar a ciegas cortaría a mitad de palabra;
+ * así se descarta la cláusula entera que no entra y la frase sigue leyéndose.
+ */
+export function fitDescription(essential: string, ...optional: string[]): string {
+  let text = essential;
+  for (const extra of optional) {
+    const candidate = `${text} ${extra}`;
+    if (candidate.length <= MAX_DESCRIPTION) text = candidate;
+  }
+  return text.length <= MAX_DESCRIPTION
+    ? text
+    : `${text.slice(0, MAX_DESCRIPTION - 1).replace(/[\s,;:–-]+\S*$/, "")}…`;
+}
+
+/**
  * Imagen de compartido por defecto, servida por `app/opengraph-image.tsx`.
  *
  * Hay que nombrarla explícitamente. La intuición dice que la imagen del
@@ -51,10 +82,14 @@ export function pageMetadata({
   const url = absoluteUrl(path);
   const fullTitle = absoluteTitle ? title : `${title}${TITLE_SUFFIX}`;
   const images = [{ url: image, width: 1200, height: 630, alt: fullTitle }];
+  // Red de seguridad: aunque cada página debería entregar una descripción que
+  // ya quepa, con ~900 páginas conviene que el límite se aplique en el único
+  // sitio por el que pasan todas.
+  const summary = fitDescription(description);
 
   return {
     title: absoluteTitle ? { absolute: title } : title,
-    description,
+    description: summary,
     alternates: { canonical: url },
     openGraph: {
       type: "website",
@@ -62,13 +97,13 @@ export function pageMetadata({
       siteName: SITE_NAME,
       locale: LOCALE,
       title: fullTitle,
-      description,
+      description: summary,
       images,
     },
     twitter: {
       card: "summary_large_image",
       title: fullTitle,
-      description,
+      description: summary,
       images,
     },
     ...(noindex ? { robots: { index: false, follow: true } } : {}),

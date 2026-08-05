@@ -4,7 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import PlayableChord from "@/components/PlayableChord";
 import { ChordCell, buildScalePage } from "@/lib/seo/scale-page";
-import { pageMetadata } from "@/lib/seo/metadata";
+import { fitDescription, pageMetadata } from "@/lib/seo/metadata";
 import { NOTES, SCALE_SLUGS, allScaleSlugs, parseScaleSlug } from "@/lib/seo/slugs";
 
 type Params = { params: Promise<{ slug: string }> };
@@ -26,9 +26,14 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   return pageMetadata({
     title: `Escala de ${data.spanishName} en ukelele barítono`,
-    description:
-      `La escala de ${data.spanishName} en ukelele barítono (D–G–B–E): notas ${notes}, digitaciones en el ` +
-      `diapasón, los acordes que salen de ella y progresiones para practicarla.`,
+    // Las notas van primero entre lo opcional porque son lo que distingue esta
+    // página de las otras 431; en una cromática con dobles bemoles no caben, y
+    // ahí se cae esa cláusula en lugar de recortar la frase a la mitad.
+    description: fitDescription(
+      `${data.spanishName} en ukelele barítono (D–G–B–E).`,
+      `Notas ${notes}.`,
+      "Digitaciones, acordes de la escala y progresiones para practicarla.",
+    ),
     path: `/escalas/${route.canonical}`,
     absoluteTitle: true,
   });

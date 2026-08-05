@@ -8,7 +8,7 @@ export const metadata: Metadata = pageMetadata({
   title: "Explorador de acordes para ukelele barítono",
   description:
     "Escribí cualquier cifrado (C#m7, Fmaj9, G7sus4) y mirá todas sus posiciones en el ukelele barítono, " +
-    "ordenadas por dificultad, altura del bajo o registro. Con diagrama y sonido.",
+    "ordenadas por dificultad. Con diagrama y sonido.",
   path: "/explorador",
 });
 

@@ -412,9 +412,12 @@ export default function HomePage() {
       <section className="no-print">
         {!result && (
           <div className="mb-6 mt-4 text-center">
-            <h1 className="text-3xl font-bold tracking-tight">
+            {/* h2 y no h1: el encabezado principal de la portada lo pone la
+                página de servidor, que además no desaparece al cargar una
+                canción. Acá arranca la sección de la herramienta. */}
+            <h2 className="text-2xl font-bold tracking-tight">
               Tu canción, lista para ukelele barítono
-            </h1>
+            </h2>
             <p className="mt-2 text-stone-500">
               Pegá una canción con acordes (o una URL) y te devuelvo posiciones correctas, cómodas y
               verificadas nota por nota.
@@ -516,10 +519,10 @@ export default function HomePage() {
         <>
           <section className="flex flex-wrap items-center gap-3">
             <div>
-              <h1 className="text-2xl font-bold">
+              <h2 className="text-2xl font-bold">
                 {song.title ?? "Arreglo para barítono"}
                 {song.artist && <span className="font-normal text-stone-500"> — {song.artist}</span>}
-              </h1>
+              </h2>
               {songKey && (
                 <p className="text-sm text-stone-500">
                   Tonalidad detectada: <strong className="text-stone-700">{songKey.name}</strong>

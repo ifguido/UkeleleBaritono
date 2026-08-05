@@ -10,8 +10,8 @@ import { featuredRootFor } from "@/lib/seo/featured";
 export const metadata: Metadata = pageMetadata({
   title: "Escalas y modos para ukelele barítono",
   description:
-    "36 escalas y modos en las 12 tonalidades para ukelele barítono (D–G–B–E): diapasón completo, " +
-    "digitaciones por posición, acordes que salen de cada escala y progresiones para practicarlas.",
+    "36 escalas y modos en las 12 tonalidades para ukelele barítono (D–G–B–E): diapasón, digitaciones, " +
+    "acordes de cada escala y progresiones.",
   path: "/escalas",
 });
 

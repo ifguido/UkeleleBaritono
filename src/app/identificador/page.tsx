@@ -9,7 +9,7 @@ export const metadata: Metadata = pageMetadata({
   title: "Identificador de acordes por digitación",
   description:
     "¿Qué acorde estás tocando? Escribí los trastes que pisás en el ukelele barítono (D–G–B–E) y te digo " +
-    "qué acorde es, con sus nombres alternativos e inversiones.",
+    "qué acorde es, con sus lecturas alternativas.",
   path: "/identificador",
 });
 

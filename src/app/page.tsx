@@ -9,8 +9,8 @@ import { SITE_DESCRIPTION } from "@/lib/seo/site";
 export const metadata: Metadata = pageMetadata({
   title: "Ukelele barítono: acordes, escalas y afinador (D–G–B–E)",
   description:
-    "Todo para tocar el ukelele barítono en afinación D–G–B–E: adaptador de canciones, 420 acordes con sus " +
-    "digitaciones, 36 escalas en las 12 tonalidades y afinador por micrófono. Gratis y sin registro.",
+    "420 acordes con sus digitaciones, 36 escalas, afinador por micrófono y adaptador de canciones " +
+    "para ukelele barítono (D–G–B–E). Gratis y sin registro.",
   path: "/",
   absoluteTitle: true,
 });
@@ -61,6 +61,25 @@ export default function Page() {
   return (
     <div className="space-y-12">
       <JsonLd schema={[webApplicationSchema(SITE_DESCRIPTION), faqSchema(FAQ)]} />
+
+      {/*
+        El H1 vive acá, en el servidor, y no dentro del adaptador de canciones.
+        Allí estaba dentro de un bloque condicional que desaparecía en cuanto se
+        cargaba una canción, y describía solo esa herramienta mientras el resto
+        de la portada hablaba de acordes, escalas y afinador. Ahora el
+        encabezado está siempre presente y sus palabras son las que desarrolla
+        el texto de abajo.
+      */}
+      <header className="no-print">
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          Acordes, escalas y afinador para ukelele barítono
+        </h1>
+        <p className="mt-3 max-w-3xl text-stone-600">
+          Todo calculado para la afinación D–G–B–E, la del barítono, y verificado nota por nota.
+          Pegá una canción y te la devuelvo con posiciones cómodas, buscá cualquier acorde con sus
+          digitaciones, estudiá las escalas sobre el mástil o afiná con el micrófono.
+        </p>
+      </header>
 
       <SongClient />
 

@@ -9,7 +9,7 @@ export const metadata: Metadata = pageMetadata({
   title: "Afinador de ukelele barítono online (D–G–B–E)",
   description:
     "Afiná tu ukelele barítono con el micrófono, gratis y sin instalar nada. Modo por cuerdas para D–G–B–E " +
-    "y modo cromático, con indicación en cents y tono de referencia ajustable.",
+    "y modo cromático, con precisión en cents.",
   path: "/afinador",
 });
 

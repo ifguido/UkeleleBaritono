@@ -7,8 +7,8 @@ import { NOTES, QUALITIES } from "@/lib/seo/slugs";
 export const metadata: Metadata = pageMetadata({
   title: "Diccionario de acordes para ukelele barítono (D–G–B–E)",
   description:
-    "Los 420 acordes del ukelele barítono con todas sus posiciones y diagramas: mayores, menores, séptimas, " +
-    "novenas y tensiones, en las 12 tonalidades. Calculados nota por nota, no copiados.",
+    "Los 420 acordes del ukelele barítono (D–G–B–E) con sus posiciones y diagramas: mayores, menores, " +
+    "séptimas y tensiones, en las 12 tonalidades.",
   path: "/acordes",
 });
 

@@ -6,7 +6,7 @@ import ChordDiagram from "@/components/ChordDiagram";
 import PlayableChord from "@/components/PlayableChord";
 import { buildChordPage } from "@/lib/seo/chord-page";
 import { relatedScaleIdFor } from "@/lib/seo/featured";
-import { pageMetadata } from "@/lib/seo/metadata";
+import { fitDescription, pageMetadata } from "@/lib/seo/metadata";
 import { NOTES, QUALITIES, SCALE_BY_ID, allChordSlugs, parseChordSlug } from "@/lib/seo/slugs";
 import { difficultyLabel } from "@/lib/ui/difficulty";
 import { SCALES } from "@/lib/engine/scales";
@@ -30,9 +30,11 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   return pageMetadata({
     title: `Acorde ${data.spanishName} (${data.symbol}) en ukelele barítono`,
-    description:
-      `Cómo tocar ${data.symbol} en ukelele barítono (D–G–B–E): ${data.voicings.length} posiciones con ` +
-      `diagrama, digitación recomendada y las notas del acorde (${notes}).`,
+    description: fitDescription(
+      `Cómo tocar ${data.symbol} en ukelele barítono (D–G–B–E): ${data.voicings.length} posiciones con diagrama.`,
+      `Notas del acorde: ${notes}.`,
+      "Pulsá cualquiera para escucharla.",
+    ),
     path: `/acordes/${route.canonical}`,
     // Sin marca: el título ya es largo y con ~900 páginas conviene que el
     // recorte de Google se coma cualquier cosa antes que la keyword.

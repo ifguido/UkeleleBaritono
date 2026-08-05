@@ -43,7 +43,7 @@ export function websiteSchema() {
     "@context": "https://schema.org",
     "@type": "WebSite",
     "@id": ID_WEBSITE,
-    url: `${SITE_URL}/`,
+    url: SITE_URL,
     name: SITE_NAME,
     inLanguage: "es",
     publisher: { "@id": ID_ORGANIZATION },
@@ -56,7 +56,7 @@ export function organizationSchema() {
     "@type": "Organization",
     "@id": ID_ORGANIZATION,
     name: SITE_NAME,
-    url: `${SITE_URL}/`,
+    url: SITE_URL,
   };
 }
 
@@ -69,7 +69,7 @@ export function webApplicationSchema(description: string) {
     "@context": "https://schema.org",
     "@type": "WebApplication",
     name: SITE_NAME,
-    url: `${SITE_URL}/`,
+    url: SITE_URL,
     applicationCategory: "MultimediaApplication",
     operatingSystem: "Cualquiera con navegador web",
     browserRequirements: "Requiere JavaScript",

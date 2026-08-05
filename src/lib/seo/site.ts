@@ -28,14 +28,23 @@ export const SITE_TITLE = "Ukelele Barítono — acordes, escalas y afinador";
 
 export const SITE_DESCRIPTION =
   "Acordes, escalas, afinador y adaptador de canciones para ukelele barítono (D–G–B–E). " +
-  "Cada posición se calcula y se verifica nota por nota: nada de tablas copiadas.";
+  "Cada posición se verifica nota por nota.";
 
 export const LOCALE = "es_ES";
 
 /** Afinación de referencia, repetida en metadatos y structured data. */
 export const TUNING_LABEL = "D–G–B–E";
 
-/** Devuelve una URL absoluta a partir de una ruta interna ("/acordes"). */
+/**
+ * Devuelve una URL absoluta a partir de una ruta interna ("/acordes").
+ *
+ * La raíz se emite sin barra final. No es una preferencia estética: Next
+ * normaliza el canonical según `trailingSlash`, que por defecto es `false`, y
+ * quita la barra pase lo que pase. Si acá se devolviera con barra, el sitemap y
+ * el JSON-LD dirían una cosa y el canonical otra —una incoherencia real— para
+ * evitar un aviso que es falso: Google documenta que `example.com` y
+ * `example.com/` son la misma URL.
+ */
 export function absoluteUrl(path = "/"): string {
   if (!path.startsWith("/")) path = `/${path}`;
   return path === "/" ? SITE_URL : `${SITE_URL}${path}`;
