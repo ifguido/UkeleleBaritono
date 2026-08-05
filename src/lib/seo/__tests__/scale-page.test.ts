@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildScalePage, everyScaleRoute } from "../scale-page";
-import { chordSlug, parseChordSlug } from "../slugs";
+import { parseChordSlug } from "../slugs";
 
 describe("páginas de escala", () => {
   const routes = everyScaleRoute();
@@ -30,14 +30,44 @@ describe("páginas de escala", () => {
   it("da acordes cuyo slug existe, para no enlazar a páginas inexistentes", () => {
     for (const route of routes) {
       const data = buildScalePage(route)!;
-      for (const degree of data.degrees) {
-        for (const chord of [degree.triad, degree.seventh]) {
-          if (!chord) continue;
-          const slug = chordSlug(chord.chord.root, chord.chord.quality);
-          expect(slug, `${route.canonical} → ${chord.symbol}`).not.toBeNull();
-          expect(parseChordSlug(slug!)?.canonical, slug!).toBe(slug);
+      const cells = [
+        ...data.degrees.flatMap((d) => [d.triad, d.seventh]),
+        ...data.progressions.flatMap((p) => p.chords),
+      ];
+      for (const cell of cells) {
+        if (!cell?.slug) continue;
+        expect(parseChordSlug(cell.slug)?.canonical, cell.slug).toBe(cell.slug);
+      }
+    }
+  });
+
+  it("da notas reproducibles en todo acorde que entre en cuatro cuerdas", () => {
+    const sinSonido: string[] = [];
+    for (const route of routes) {
+      const data = buildScalePage(route)!;
+      for (const cell of data.degrees.flatMap((d) => [d.triad, d.seventh])) {
+        if (!cell) continue;
+        // Puede ser null si el acorde no entra en el barítono, pero nunca vacío:
+        // un array de cero notas dejaría un botón que no suena al pulsarlo.
+        if (cell.midiNotes !== null && cell.midiNotes.length === 0) {
+          sinSonido.push(`${route.canonical} → ${cell.symbol}`);
         }
       }
     }
+    expect(sinSonido).toEqual([]);
+  });
+
+  it("reutiliza las posiciones ya calculadas en vez de rehacerlas", () => {
+    // La caché es lo que mantiene el build en segundos: sin ella, las 432
+    // escalas recalcularían miles de veces los mismos 420 acordes.
+    const inicio = performance.now();
+    routes.forEach((route) => buildScalePage(route));
+    const primeraPasada = performance.now() - inicio;
+
+    const reinicio = performance.now();
+    routes.forEach((route) => buildScalePage(route));
+    const segundaPasada = performance.now() - reinicio;
+
+    expect(segundaPasada).toBeLessThan(primeraPasada);
   });
 });

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ChordDiagram from "@/components/ChordDiagram";
+import PlayableChord from "@/components/PlayableChord";
 import { buildChordPage } from "@/lib/seo/chord-page";
 import { relatedScaleIdFor } from "@/lib/seo/featured";
 import { pageMetadata } from "@/lib/seo/metadata";
@@ -109,6 +110,10 @@ export default async function Page({ params }: Params) {
             registro o la inversión: sirven para enlazar mejor con el acorde anterior de la canción.
           </p>
         )}
+        <p className="mt-2 text-sm text-stone-500">
+          Pulsá cualquier diagrama para escucharlo. Manteniendo pulsado suena arpegiado, nota por
+          nota.
+        </p>
 
         <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {data.voicings.map((voicing) => {
@@ -118,8 +123,16 @@ export default async function Page({ params }: Params) {
                 key={voicing.display}
                 className="flex flex-col items-center rounded-xl border border-stone-200 bg-white p-4"
               >
-                <ChordDiagram frets={voicing.frets} barre={voicing.barre} size="lg" />
-                <p className="mt-3 font-mono text-sm text-stone-700">{voicing.display}</p>
+                {/* El diagrama se renderiza en el servidor y se le añade el
+                    gesto por fuera: así sigue estando en el HTML inicial. */}
+                <PlayableChord
+                  midiNotes={voicing.midiNotes}
+                  label={`${data.symbol} en ${voicing.display}`}
+                  className="p-1"
+                >
+                  <ChordDiagram frets={voicing.frets} barre={voicing.barre} size="lg" />
+                </PlayableChord>
+                <p className="mt-2 font-mono text-sm text-stone-700">{voicing.display}</p>
                 <p className="mt-1 flex flex-wrap justify-center gap-1.5 text-xs">
                   <span className={`rounded px-1.5 py-0.5 ${diff.className}`}>{diff.text}</span>
                   {voicing.barre && (

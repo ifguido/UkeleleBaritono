@@ -2,16 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import Breadcrumbs from "@/components/Breadcrumbs";
-import { buildScalePage } from "@/lib/seo/scale-page";
+import PlayableChord from "@/components/PlayableChord";
+import { ChordCell, buildScalePage } from "@/lib/seo/scale-page";
 import { pageMetadata } from "@/lib/seo/metadata";
-import {
-  NOTES,
-  SCALE_SLUGS,
-  allScaleSlugs,
-  chordSlug,
-  parseScaleSlug,
-} from "@/lib/seo/slugs";
-import { ScaleChord } from "@/lib/engine/scale-harmony";
+import { NOTES, SCALE_SLUGS, allScaleSlugs, parseScaleSlug } from "@/lib/seo/slugs";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -40,14 +34,27 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   });
 }
 
-/** Enlace a la página del acorde, si la cualidad tiene una. */
-function ChordLink({ chord }: { chord: ScaleChord }) {
-  const slug = chordSlug(chord.chord.root, chord.chord.quality);
-  if (!slug) return <span className="font-medium">{chord.symbol}</span>;
+/** Nombre del acorde: enlaza a su página y suena al pulsar el altavoz. */
+function ChordEntry({ chord }: { chord: ChordCell }) {
   return (
-    <Link href={`/acordes/${slug}`} className="font-medium text-teal-800 hover:underline">
-      {chord.symbol}
-    </Link>
+    <span className="inline-flex items-center gap-1.5">
+      {chord.slug ? (
+        <Link href={`/acordes/${chord.slug}`} className="font-medium text-teal-800 hover:underline">
+          {chord.symbol}
+        </Link>
+      ) : (
+        <span className="font-medium">{chord.symbol}</span>
+      )}
+      {chord.midiNotes && (
+        <PlayableChord
+          midiNotes={chord.midiNotes}
+          label={chord.symbol}
+          className="px-1 text-xs leading-none text-stone-400 hover:text-teal-700"
+        >
+          ▶
+        </PlayableChord>
+      )}
+    </span>
   );
 }
 
@@ -124,11 +131,15 @@ export default async function Page({ params }: Params) {
                       {degree.note.name} <span className="text-stone-400">({degree.note.degree})</span>
                     </td>
                     <td className="py-2 pr-4">
-                      {degree.triad ? <ChordLink chord={degree.triad} /> : <span className="text-stone-400">—</span>}
+                      {degree.triad ? (
+                        <ChordEntry chord={degree.triad} />
+                      ) : (
+                        <span className="text-stone-400">—</span>
+                      )}
                     </td>
                     <td className="py-2 pr-4">
                       {degree.seventh ? (
-                        <ChordLink chord={degree.seventh} />
+                        <ChordEntry chord={degree.seventh} />
                       ) : (
                         <span className="text-stone-400">—</span>
                       )}
@@ -155,23 +166,14 @@ export default async function Page({ params }: Params) {
             {progressions.map((progression) => (
               <li key={progression.name} className="rounded-xl border border-stone-200 bg-white p-4">
                 <p className="font-semibold text-stone-900">{progression.name}</p>
-                <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                  {progression.chords.map((chord, i) => {
-                    const slug = chordSlug(chord.chord.root, chord.chord.quality);
-                    return (
-                      <span key={`${chord.symbol}-${i}`} className="text-sm">
-                        {slug ? (
-                          <Link href={`/acordes/${slug}`} className="text-teal-800 hover:underline">
-                            {chord.symbol}
-                          </Link>
-                        ) : (
-                          chord.symbol
-                        )}
-                        <span className="ml-1 font-mono text-xs text-stone-400">{chord.roman}</span>
-                      </span>
-                    );
-                  })}
-                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+                  {progression.chords.map((chord, i) => (
+                    <span key={`${chord.symbol}-${i}`} className="text-sm">
+                      <ChordEntry chord={chord} />
+                      <span className="ml-1 font-mono text-xs text-stone-400">{chord.roman}</span>
+                    </span>
+                  ))}
+                </div>
                 {progression.note && <p className="mt-2 text-xs text-stone-500">{progression.note}</p>}
               </li>
             ))}
