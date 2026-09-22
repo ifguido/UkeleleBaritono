@@ -4,7 +4,7 @@ import Link from "next/link";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import { JsonLd, organizationSchema, websiteSchema } from "@/lib/seo/jsonld";
-import { TOOL_ROUTES } from "@/lib/seo/routes";
+import { LEGAL_ROUTES, TOOL_ROUTES } from "@/lib/seo/routes";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL, TUNING_LABEL } from "@/lib/seo/site";
 import "./globals.css";
 
@@ -143,6 +143,15 @@ export default function RootLayout({
                 Motor musical determinista: cada posición se valida nota por nota, ninguna se copia
                 de una tabla.
               </p>
+              <ul className="mt-3 space-y-1 text-stone-500">
+                {LEGAL_ROUTES.map((route) => (
+                  <li key={route.path}>
+                    <Link href={route.path} className="hover:text-stone-900">
+                      {route.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
             <nav aria-label="Secciones">
               <p className="font-semibold text-stone-900">Herramientas</p>

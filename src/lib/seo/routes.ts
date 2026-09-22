@@ -66,4 +66,19 @@ export const TOOL_ROUTES: SiteRoute[] = [
   },
 ];
 
-export const ROUTE_BY_PATH = new Map(TOOL_ROUTES.map((r) => [r.path, r]));
+/**
+ * Páginas que no son herramientas pero sí existen y van al sitemap: la
+ * política de privacidad la exigen las tiendas de apps (la app móvil enlaza
+ * acá) y no tiene sentido que aparezca entre las herramientas del menú.
+ */
+export const LEGAL_ROUTES: SiteRoute[] = [
+  {
+    path: "/privacidad",
+    nav: "Privacidad",
+    name: "Política de privacidad",
+    blurb: "Qué datos usa el sitio y la app, y cuáles no: el micrófono se analiza en tu dispositivo.",
+    priority: 0.3,
+  },
+];
+
+export const ROUTE_BY_PATH = new Map([...TOOL_ROUTES, ...LEGAL_ROUTES].map((r) => [r.path, r]));

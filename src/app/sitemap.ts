@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { absoluteUrl } from "@/lib/seo/site";
-import { TOOL_ROUTES } from "@/lib/seo/routes";
+import { LEGAL_ROUTES, TOOL_ROUTES } from "@/lib/seo/routes";
 import { NOTES, QUALITIES, SCALE_SLUGS } from "@/lib/seo/slugs";
 
 /**
@@ -40,6 +40,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: route.priority,
   }));
 
+  const legal: MetadataRoute.Sitemap = LEGAL_ROUTES.map((route) => ({
+    url: absoluteUrl(route.path),
+    lastModified: CONTENT_UPDATED_AT,
+    changeFrequency: "yearly",
+    priority: route.priority,
+  }));
+
   const chords: MetadataRoute.Sitemap = NOTES.flatMap((note) =>
     QUALITIES.map((quality) => ({
       url: absoluteUrl(`/acordes/${note.slug}-${quality.slug}`),
@@ -58,5 +65,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
   );
 
-  return [...tools, ...chords, ...scales];
+  return [...tools, ...legal, ...chords, ...scales];
 }

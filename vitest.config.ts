@@ -7,4 +7,6 @@ export default defineConfig({
   resolve: {
     alias: { "@": path.resolve(__dirname, "src") },
   },
+  // La app móvil vive en su propio proyecto; sus node_modules no son de acá.
+  test: { exclude: ["**/node_modules/**", "mobile/**"] },
 });

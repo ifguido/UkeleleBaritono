@@ -15,6 +15,16 @@ npm test        # motor musical + integridad de las URLs
 npm run build   # genera las ~865 páginas estáticas
 ```
 
+## App para iOS y Android
+
+En [`mobile/`](mobile/) está la app nativa (Expo + EAS). Comparte este mismo motor musical —Metro
+apunta a `src/lib` con el alias `@core/*`, no hay copia— y agrega lo que necesita el teléfono: audio
+nativo, micrófono, diagramas en SVG y pestañas nativas. Tiene su propio `package.json`, se desarrolla
+con `cd mobile && npm install && npm run ios|android` y se publica con `eas build`/`eas submit`. Los
+detalles, la guía de publicación y los textos de tienda están en [`mobile/README.md`](mobile/README.md).
+
+`mobile/` queda fuera del `tsconfig`, del ESLint y de Vitest de la raíz: cada proyecto valida lo suyo.
+
 ## Estructura
 
 ```
@@ -22,7 +32,8 @@ src/
   app/                 Rutas (App Router, Next.js 16)
     acordes/[slug]/      420 páginas de acorde
     escalas/[slug]/      432 páginas de escala
-    sitemap.ts           858 URLs
+    privacidad/          Política de privacidad (la exigen las tiendas de apps)
+    sitemap.ts           859 URLs
     robots.ts
   components/          Vistas. ChordDiagram es server-safe a propósito:
                        los diagramas tienen que estar en el HTML inicial.
