@@ -43,6 +43,9 @@ Desde Safari, Chrome o cualquier sitio de acordes, tocá Compartir → Ukelele B
 AFINADOR
 Afiná con el micrófono, cuerda por cuerda o en modo cromático, con precisión en cents y referencia ajustable (La = 440 Hz o la que uses). El audio se analiza en el teléfono y nunca sale de él.
 
+TAMBIÉN EN APPLE WATCH
+El afinador está en tu muñeca: usa el micrófono del reloj, funciona sin el iPhone y vibra cuando la cuerda queda afinada.
+
 TODO SUENA
 Los acordes y las escalas se escuchan con muestras reales de cuerda de nylon. Funciona sin conexión.
 
@@ -68,6 +71,8 @@ Se necesitan como mínimo (se pueden sacar del simulador con ⌘S / desde Androi
 - iPhone 6,9" (1320×2868) — obligatorias. iPad 13" (2064×2752) si `supportsTablet` sigue en `true`.
 - Android: teléfono (mín. 1080×1920), 2 a 8 capturas; ícono 512×512 (`assets/icon/icon.png` sirve);
   imagen destacada 1024×500.
+- Apple Watch (App Store): al menos una captura de 410×502 (Ultra) o 396×484 (Series 7–10, 45 mm).
+  Se saca desde el reloj (corona + botón lateral) y se sincroniza a Fotos del iPhone.
 
 Sugerencia de secuencia (misma en las dos tiendas):
 
@@ -83,7 +88,7 @@ Sugerencia de secuencia (misma en las dos tiendas):
 ### App Store — "App Privacy"
 
 - **Data Not Collected**. La app no recopila datos. No hay analítica, ni publicidad, ni cuentas.
-- Micrófono: se usa para el afinador; el audio se procesa en el dispositivo y no se almacena ni transmite.
+- Micrófono: se usa para el afinador (iPhone y Apple Watch); el audio se procesa en el dispositivo y no se almacena ni transmite.
 - `ITSAppUsesNonExemptEncryption` ya está en `false` en `app.json` (solo HTTPS estándar).
 
 ### Google Play — "Data safety"

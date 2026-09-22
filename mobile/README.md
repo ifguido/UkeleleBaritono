@@ -28,6 +28,8 @@ src/
   features/            Cada herramienta, separada de la pantalla que la muestra.
   ui/                  Primitivas (Button, Chip, Card, Field…) con tema claro/oscuro.
   theme/               Paleta (la misma stone/teal de la web) y tipografías.
+targets/
+  watch/               App de Apple Watch (SwiftUI): solo el afinador. Ver abajo.
 assets/
   icon/                Ícono (claro, oscuro, tinted), adaptativo de Android y splash.
   samples/nylon/       Copia de los 12 samples de `public/samples/nylon` (van dentro del paquete).
@@ -70,7 +72,7 @@ Todo se hace con EAS desde `mobile/`. Cuenta de Expo: `ifguido`.
    (<https://expo.dev/accounts/ifguido/projects/ukelele-baritono>); el `projectId` está en `app.json`.
 3. Cuentas de tienda:
    - **Apple**: la app ya existe en App Store Connect (cuenta `gfaranna95@icloud.com`, app
-     `6478063161`, bundle id `com.ifguido.ukelelebaritono`). `eas submit` ya apunta ahí (`eas.json`).
+     `6814575871`, bundle id `com.ifguido.ukelelebaritono`). `eas submit` ya apunta ahí (`eas.json`).
      La extensión de compartir usa el bundle id `com.ifguido.ukelelebaritono.share-extension` y el
      App Group `group.com.ifguido.ukelelebaritono`. EAS crea los dos identificadores, pero **no
      activa la capacidad App Groups en el de la extensión** (bug conocido de EAS con extensiones:
@@ -116,6 +118,26 @@ npm run build:preview     # .apk para Android + build interno para iOS (disposit
 El texto, las capturas y las respuestas a los cuestionarios de privacidad están en
 [`store/listing.md`](store/listing.md). La política de privacidad que piden las dos tiendas está
 publicada en <https://ukelelebaritone.com/privacidad> (`src/app/privacidad` del sitio).
+
+## Apple Watch
+
+`targets/watch/` es una app de reloj independiente con el afinador, escrita en SwiftUI (React Native
+no corre en watchOS). La agrega al proyecto de Xcode el plugin `@bacons/apple-targets` en cada
+`prebuild`, como target `UkeleleWatch` (bundle id `com.ifguido.ukelelebaritono.watchkitapp`), y se
+publica dentro de la misma ficha del App Store.
+
+- `Pitch.swift` y `Tuning.swift` son traducciones fieles de `src/lib/audio/pitch.ts` y
+  `src/lib/engine/tuning.ts` (mismo YIN, mismos umbrales). Si se cambia algo allá, se cambia acá.
+- `AudioInput.swift` toma el micrófono del reloj con `AVAudioEngine` en modo *measurement*;
+  `TunerModel.swift` es el mismo bucle que la pantalla del teléfono (40 ms, mediana, 0,7 s para dar
+  la cuerda por afinada, vibración al lograrlo).
+- `Info.plist` del target lleva el texto de permiso de micrófono y `WKRunsIndependentlyOfCompanionApp`.
+- **Para compilar el proyecto hace falta la plataforma watchOS en Xcode** (Xcode › Settings ›
+  Components › watchOS, unos 4 GB), también para archivar la app del iPhone, porque la del reloj va
+  embebida. EAS ya la tiene.
+- La pantalla del reloj se apaga sola según el ajuste "Volver al reloj" del sistema; Apple no permite
+  mantenerla encendida para un afinador.
+- Solo se prueba de verdad en un Apple Watch real: el simulador no da micrófono.
 
 ## Decisiones que conviene conocer
 

@@ -55,7 +55,8 @@
             ]
           }
         ]
-      }
+      },
+      "appleTeamId": "77C9TD2YD6"
     },
     "android": {
       "package": "com.ifguido.ukelelebaritono",
@@ -117,7 +118,8 @@
             "text/*"
           ]
         }
-      ]
+      ],
+      "@bacons/apple-targets"
     ],
     "experiments": {
       "typedRoutes": true,
