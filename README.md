@@ -2,6 +2,9 @@
 
 Acordes, escalas, afinador y adaptador de canciones para ukelele barítono en afinación **D–G–B–E**.
 
+- Web: <https://www.ukelelebaritone.com/>
+- App para iPhone y Apple Watch: [`mobile/`](mobile/) (App Store, id `6814575871`)
+
 Todo lo musical se calcula desde los intervalos y se verifica nota por nota: no hay tablas de
 posiciones copiadas en ningún lado. Si un diagrama aparece, es porque el motor comprobó que contiene
 las notas que el acorde tiene que contener.
@@ -43,6 +46,9 @@ src/
 ```
 
 ## Convención de URLs
+
+El dominio canónico es `https://www.ukelelebaritone.com` (con `www`: el apex redirige ahí con 308) y
+está en un solo lugar, `src/lib/seo/site.ts`.
 
 Las URLs de acorde y escala son **permanentes**: están indexadas, y cambiarlas cuesta posiciones.
 El mapeo vive en `src/lib/seo/slugs.ts` escrito a mano —no derivado de los nombres de la interfaz,

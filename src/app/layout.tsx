@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
+import AppStoreBanner from "@/components/AppStoreBanner";
+import { APP_STORE_ID } from "@/lib/seo/apps";
 import { JsonLd, organizationSchema, websiteSchema } from "@/lib/seo/jsonld";
 import { LEGAL_ROUTES, TOOL_ROUTES } from "@/lib/seo/routes";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL, TUNING_LABEL } from "@/lib/seo/site";
@@ -33,6 +35,10 @@ export const metadata: Metadata = {
   publisher: SITE_NAME,
   category: "music",
   formatDetection: { telephone: false, email: false, address: false },
+  // Smart App Banner de Safari en iOS: el sistema muestra "Ver" o "Abrir"
+  // arriba de la página sin que haya que dibujar nada. En otros navegadores
+  // lo suple <AppStoreBanner />.
+  itunes: { appId: APP_STORE_ID },
   openGraph: {
     type: "website",
     url: `${SITE_URL}/`,
@@ -198,6 +204,7 @@ export default function RootLayout({
           </div>
         </footer>
 
+        <AppStoreBanner />
         <SpeedInsights />
         <Analytics />
       </body>

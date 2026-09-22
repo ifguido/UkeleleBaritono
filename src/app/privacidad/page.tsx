@@ -30,7 +30,7 @@ export default function Page() {
         <h1 className="text-3xl font-bold tracking-tight">Política de privacidad</h1>
         <p className="mt-2 text-sm text-stone-500">Última actualización: {UPDATED}</p>
         <p className="mt-3 max-w-3xl text-stone-600">
-          Esta política cubre el sitio ukelelebaritone.com y la aplicación <strong>Ukelele Barítono</strong> para
+          Esta política cubre el sitio www.ukelelebaritone.com y la aplicación <strong>Ukelele Barítono</strong> para
           iOS y Android. La versión corta: no hay cuentas, no hay registro, no se venden ni se comparten datos, y
           lo que hace la herramienta lo hace en tu dispositivo.
         </p>

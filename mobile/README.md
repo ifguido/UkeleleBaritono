@@ -117,7 +117,7 @@ npm run build:preview     # .apk para Android + build interno para iOS (disposit
 
 El texto, las capturas y las respuestas a los cuestionarios de privacidad están en
 [`store/listing.md`](store/listing.md). La política de privacidad que piden las dos tiendas está
-publicada en <https://ukelelebaritone.com/privacidad> (`src/app/privacidad` del sitio).
+publicada en <https://www.ukelelebaritone.com/privacidad> (`src/app/privacidad` del sitio).
 
 ## Apple Watch
 
@@ -149,7 +149,7 @@ publica dentro de la misma ficha del App Store.
   eco y el control de ganancia que le comen los armónicos a la cuerda. Al detener, vuelve a `playback`.
 - **Sin modo de fondo ni servicio en primer plano**: el afinador se apaga al pasar a segundo plano.
   Pedir `audio` en `UIBackgroundModes` sin justificación es motivo de rechazo en la revisión de Apple.
-- **Importar por URL** llama a `https://ukelelebaritone.com/api/import`: el scraping vive en el
+- **Importar por URL** llama a `https://www.ukelelebaritone.com/api/import`: el scraping vive en el
   servidor a propósito, para arreglarlo sin publicar una versión nueva de la app.
 - **Pestañas nativas** (`expo-router/unstable-native-tabs`): en iOS 26 son la barra de cristal del
   sistema. Los íconos son SF Symbols en iOS y Material Symbols en Android.

@@ -10,8 +10,8 @@ Textos listos para pegar. Los límites de caracteres son los de cada tienda.
 | Bundle ID (iOS) / package (Android) | `com.ifguido.ukelelebaritono` |
 | Categoría | Música (App Store: Music · Play: Music & Audio) |
 | Idioma principal | Español |
-| Sitio web | https://ukelelebaritone.com |
-| Política de privacidad | https://ukelelebaritone.com/privacidad |
+| Sitio web | https://www.ukelelebaritone.com |
+| Política de privacidad | https://www.ukelelebaritone.com/privacidad |
 | Soporte | farannaguido@gmail.com |
 | Clasificación de edad | 4+ / Para todos (sin contenido sensible) |
 | Precio | Gratis, sin compras ni anuncios |

@@ -11,7 +11,7 @@
     "backgroundColor": "#fafaf9",
     "ios": {
       "bundleIdentifier": "com.ifguido.ukelelebaritono",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "supportsTablet": true,
       "icon": {
         "light": "./assets/icon/icon.png",

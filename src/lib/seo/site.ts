@@ -4,8 +4,15 @@
  * JSON-LD siguen coherentes entre sí.
  */
 
-/** Dominio canónico. Es el que se indexa; todo lo demás son copias. */
-const CANONICAL_ORIGIN = "https://ukelelebaritone.com";
+/**
+ * Dominio canónico. Es el que se indexa; todo lo demás son copias.
+ *
+ * Con `www` a propósito: en Vercel el apex `ukelelebaritone.com` responde 308
+ * hacia `www.ukelelebaritone.com`. Un canonical que apunta a una URL que
+ * redirige es una incoherencia que Google resuelve por su cuenta, y no
+ * siempre a favor de uno.
+ */
+const CANONICAL_ORIGIN = "https://www.ukelelebaritone.com";
 
 /**
  * URL absoluta del sitio, sin barra final.

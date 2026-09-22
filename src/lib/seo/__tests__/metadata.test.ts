@@ -27,7 +27,7 @@ describe("canonical", () => {
   // raíz haga lo que haga este módulo. Se emite igual en todas partes para que
   // canonical, og:url, sitemap y JSON-LD digan exactamente lo mismo.
   it("emite la raíz sin barra final, igual que el canonical de Next", () => {
-    expect(absoluteUrl("/")).toBe("https://ukelelebaritone.com");
+    expect(absoluteUrl("/")).toBe("https://www.ukelelebaritone.com");
   });
 
   it("no añade barra final en el resto de rutas", () => {
@@ -36,7 +36,7 @@ describe("canonical", () => {
 
   it("emite siempre un canonical absoluto", () => {
     const meta = pageMetadata({ title: "T", description: "D", path: "/acordes" });
-    expect(meta.alternates?.canonical).toBe("https://ukelelebaritone.com/acordes");
+    expect(meta.alternates?.canonical).toBe("https://www.ukelelebaritone.com/acordes");
   });
 });
 
