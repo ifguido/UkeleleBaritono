@@ -79,6 +79,13 @@ export const LEGAL_ROUTES: SiteRoute[] = [
     blurb: "Qué datos usa el sitio y la app, y cuáles no: el micrófono se analiza en tu dispositivo.",
     priority: 0.3,
   },
+  {
+    path: "/soporte",
+    nav: "Soporte",
+    name: "Soporte y contacto",
+    blurb: "Cómo escribirnos y respuestas a los problemas más comunes de la app y el sitio.",
+    priority: 0.3,
+  },
 ];
 
 export const ROUTE_BY_PATH = new Map([...TOOL_ROUTES, ...LEGAL_ROUTES].map((r) => [r.path, r]));

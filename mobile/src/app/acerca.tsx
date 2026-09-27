@@ -1,6 +1,6 @@
 import { Linking, StyleSheet, View } from "react-native";
 import Constants from "expo-constants";
-import { PRIVACY_URL, WEB_ORIGIN } from "@/lib/config";
+import { PRIVACY_URL, SUPPORT_URL, WEB_ORIGIN } from "@/lib/config";
 import { space } from "@/theme/tokens";
 import { useTheme } from "@/theme/useTheme";
 import { AppText, Button, Card, Screen, Section } from "@/ui";
@@ -51,6 +51,7 @@ export default function AboutScreen() {
             (Software Mansion, MIT). Detección de altura: algoritmo YIN (de Cheveigné y Kawahara, 2002).
           </AppText>
           <View style={styles.links}>
+            <Button title="Soporte y contacto" icon="mail-outline" variant="subtle" size="sm" onPress={() => void Linking.openURL(SUPPORT_URL)} />
             <Button title="Versión web" icon="globe-outline" variant="subtle" size="sm" onPress={() => void Linking.openURL(WEB_ORIGIN)} />
           </View>
         </Card>

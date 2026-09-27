@@ -12,7 +12,8 @@ Textos listos para pegar. Los límites de caracteres son los de cada tienda.
 | Idioma principal | Español |
 | Sitio web | https://www.ukelelebaritone.com |
 | Política de privacidad | https://www.ukelelebaritone.com/privacidad |
-| Soporte | farannaguido@gmail.com |
+| URL de soporte (App Store) | https://www.ukelelebaritone.com/soporte (nombre y mail de contacto; guía 1.5) |
+| Mail de soporte | farannaguido@gmail.com |
 | Clasificación de edad | 4+ / Para todos (sin contenido sensible) |
 | Precio | Gratis, sin compras ni anuncios |
 
@@ -20,6 +21,14 @@ Textos listos para pegar. Los límites de caracteres son los de cada tienda.
 
 - App Store: `Acordes, escalas y afinador`
 - Google Play: `Acordes, escalas, afinador y adaptador de canciones para ukelele barítono (D-G-B-E)`
+
+## Texto promocional (App Store, 170 caracteres)
+
+Se puede cambiar en cualquier momento sin mandar una versión nueva a revisión.
+
+```
+Acordes, escalas y afinador pensados para la afinación real del barítono (D–G–B–E). Pegá una canción y te la devuelve arreglada. Gratis, sin anuncios y sin conexión.
+```
 
 ## Descripción (App Store 4000 · Play 4000)
 

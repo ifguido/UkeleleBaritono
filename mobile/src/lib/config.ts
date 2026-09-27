@@ -6,3 +6,4 @@
 export const WEB_ORIGIN = "https://www.ukelelebaritone.com";
 export const IMPORT_ENDPOINT = `${WEB_ORIGIN}/api/import`;
 export const PRIVACY_URL = `${WEB_ORIGIN}/privacidad`;
+export const SUPPORT_URL = `${WEB_ORIGIN}/soporte`;
