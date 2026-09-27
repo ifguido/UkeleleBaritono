@@ -47,7 +47,7 @@ ESCALAS
 36 escalas y modos en las doce tonalidades: pentatónicas, blues, mayor y sus modos, menor armónica y melódica, bebop, simétricas y escalas de carácter. Cada una sobre el mástil completo, en cajas para puntear sin mover la mano, en tablatura, con los acordes que salen de ella, progresiones para practicar encima y ejercicios de variación.
 
 COMPARTIR Y LISTO
-Desde Safari, Chrome o cualquier sitio de acordes, tocá Compartir → Ukelele Barítono: la canción se importa y se arregla sola.
+Desde Safari, Chrome o cualquier sitio de acordes, tocá Compartir y elegí esta app: la canción se importa y se arregla sola.
 
 AFINADOR
 Afiná con el micrófono, cuerda por cuerda o en modo cromático, con precisión en cents y referencia ajustable (La = 440 Hz o la que uses). El audio se analiza en el teléfono y nunca sale de él.
