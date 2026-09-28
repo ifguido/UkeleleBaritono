@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
-import Animated, { useAnimatedProps, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from "react-native-reanimated";
 import Svg, { G, Line, Path, Polygon, Text as SvgText } from "react-native-svg";
 import { IN_TUNE_CENTS, TuningVerdict } from "@core/engine/tuning";
 import { fonts } from "@/theme/fonts";
@@ -10,6 +10,8 @@ interface Props {
   /** Desvío en cents, o null si no hay nota. */
   cents: number | null;
   verdict: TuningVerdict | null;
+  /** La cuerda dejó de sonar y se está mostrando la última lectura. */
+  held?: boolean;
   /** Nota grande del centro ("D3"). */
   note: string;
   /** Línea de abajo ("146,8 Hz · −20 cents"). */
@@ -35,16 +37,17 @@ const AnimatedG = Animated.createAnimatedComponent(G);
  *
  * La zona verde son los ±5 cents que el oído no distingue.
  */
-export function TunerGauge({ cents, verdict, note, detail, range = 50 }: Props) {
+export function TunerGauge({ cents, verdict, held = false, note, detail, range = 50 }: Props) {
   const t = useTheme();
   const clamped = cents === null ? 0 : Math.max(-range, Math.min(range, cents));
   const target = (clamped / range) * SWEEP;
 
-  // La aguja se anima en el hilo de UI: el análisis corre 25 veces por
-  // segundo y sin suavizado el indicador tiembla.
+  // La lectura ya llega suavizada (TunerStabilizer); la animación en el hilo
+  // de UI solo rellena los 40 ms entre cuadros para que el movimiento sea
+  // continuo.
   const angle = useSharedValue(0);
   useEffect(() => {
-    angle.set(withTiming(target, { duration: 90 }));
+    angle.set(withTiming(target, { duration: 140, easing: Easing.out(Easing.quad) }));
   }, [target, angle]);
   const animatedProps = useAnimatedProps(() => ({ rotation: angle.get() }));
 
@@ -79,7 +82,7 @@ export function TunerGauge({ cents, verdict, note, detail, range = 50 }: Props) 
           return <Line key={tick} x1={x1} y1={y1} x2={x2} y2={y2} stroke={tick === 0 ? t.ink : t.borderStrong} strokeWidth={tick === 0 ? 2.5 : 1.5} />;
         })}
 
-        <AnimatedG animatedProps={animatedProps} originX={CX} originY={CY} opacity={silent ? 0.2 : 1}>
+        <AnimatedG animatedProps={animatedProps} originX={CX} originY={CY} opacity={silent ? 0.2 : held ? 0.5 : 1}>
           <Path d={arc(-2.6, 2.6, RADIUS)} fill="none" stroke={color} strokeWidth={RING + 6} strokeLinecap="butt" />
           <Polygon
             points={`${CX},${CY - RADIUS + RING / 2 + 12} ${CX - 8},${CY - RADIUS + RING / 2 + 25} ${CX + 8},${CY - RADIUS + RING / 2 + 25}`}
@@ -87,7 +90,7 @@ export function TunerGauge({ cents, verdict, note, detail, range = 50 }: Props) 
           />
         </AnimatedG>
 
-        <SvgText x={CX} y={CY - 46} fontSize={note.length > 2 ? 46 : 52} fill={silent ? t.borderStrong : t.text} textAnchor="middle" fontWeight="700">
+        <SvgText x={CX} y={CY - 46} fontSize={note.length > 2 ? 46 : 52} fill={silent ? t.borderStrong : held ? t.textMuted : t.text} textAnchor="middle" fontWeight="700">
           {note}
         </SvgText>
         <SvgText x={CX} y={CY - 22} fontSize={12.5} fill={t.textMuted} textAnchor="middle" fontFamily={fonts.mono}>

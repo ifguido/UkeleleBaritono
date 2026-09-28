@@ -1,19 +1,17 @@
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, Pressable, StyleSheet, View } from "react-native";
-import { PitchTracker, detectPitch } from "@core/audio/pitch";
+import { DEFAULT_PITCH_OPTIONS, detectPitch } from "@core/audio/pitch";
+import { TunerStabilizer } from "@core/audio/stabilizer";
 import { BARITONE } from "@core/engine/notes";
 import {
   DEFAULT_A4,
-  IN_TUNE_CENTS,
   StringTarget,
-  TuningVerdict,
-  centsBetween,
+  TunerMode,
+  TunerReading,
   instructionFor,
-  nearestString,
-  readNote,
   stringTargets,
-  verdictFor,
+  tunerReading,
 } from "@core/engine/tuning";
 import { Microphone, MicrophoneError, openMicrophone } from "@/audio/microphone";
 import { playChord, preloadAudio } from "@/audio/synth";
@@ -24,14 +22,11 @@ import { radius, space } from "@/theme/tokens";
 import { useTheme } from "@/theme/useTheme";
 import { AppText, Button, Card, Chip, Notice, Screen, Segmented, Slider } from "@/ui";
 
-type Mode = "cuerdas" | "cromatico";
+type Mode = TunerMode;
 
-interface Reading {
-  frequency: number;
-  target: StringTarget | null;
-  cents: number;
-  verdict: TuningVerdict;
-  note: string;
+interface Reading extends TunerReading {
+  /** false mientras se sostiene la última lectura de una cuerda que se apaga. */
+  fresh: boolean;
 }
 
 /** Milisegundos que hay que sostener la afinación para dar la cuerda por lista. */
@@ -56,7 +51,9 @@ export default function TunerScreen() {
   const [tipsOpen, setTipsOpen] = useState(false);
 
   const micRef = useRef<Microphone | null>(null);
-  const trackerRef = useRef(new PitchTracker());
+  const stabilizerRef = useRef(new TunerStabilizer());
+  // Lectura anterior, para la histéresis del verde.
+  const lastReadingRef = useRef<Reading | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inTuneSinceRef = useRef<{ index: number; at: number } | null>(null);
   // Mientras suena el tono de referencia, el micrófono se escucharía a sí mismo.
@@ -83,7 +80,8 @@ export default function TunerScreen() {
     const mic = micRef.current;
     micRef.current = null;
     void mic?.stop();
-    trackerRef.current.reset();
+    stabilizerRef.current.reset();
+    lastReadingRef.current = null;
     inTuneSinceRef.current = null;
     setListening(false);
     setReading(null);
@@ -107,7 +105,8 @@ export default function TunerScreen() {
     if (!mic) return;
 
     if (performance.now() < muteUntilRef.current) {
-      trackerRef.current.reset();
+      stabilizerRef.current.reset();
+      lastReadingRef.current = null;
       setReading(null);
       return;
     }
@@ -116,35 +115,30 @@ export default function TunerScreen() {
     setLevel(result.level);
 
     const usable = result.clarity >= MIN_CLARITY ? result.frequency : null;
-    const frequency = trackerRef.current.push(usable);
+    const stable = stabilizerRef.current.push(usable, performance.now(), result.level);
 
-    if (frequency === null) {
+    if (stable === null) {
+      lastReadingRef.current = null;
       setReading(null);
       inTuneSinceRef.current = null;
       return;
     }
 
-    const { mode: currentMode, pinned: pin, targets: currentTargets, a4: currentA4 } = settingsRef.current;
-    let next: Reading;
-
-    if (currentMode === "cromatico") {
-      const note = readNote(frequency, currentA4);
-      next = { frequency, target: null, cents: note.cents, verdict: verdictFor(note.cents), note: note.fullName };
-    } else {
-      const target = pin !== null ? currentTargets[pin] : (nearestString(frequency, currentTargets)?.target ?? null);
-      if (target) {
-        const cents = centsBetween(frequency, target.frequency);
-        next = { frequency, target, cents, verdict: verdictFor(cents), note: target.fullName };
-      } else {
-        const note = readNote(frequency, currentA4);
-        next = { frequency, target: null, cents: note.cents, verdict: verdictFor(note.cents), note: note.fullName };
-      }
-    }
-
+    const next: Reading = {
+      ...tunerReading(stable.frequency, settingsRef.current, lastReadingRef.current),
+      fresh: stable.fresh,
+    };
+    lastReadingRef.current = next;
     setReading(next);
 
+    // Mientras se sostiene una lectura vieja no se cuenta tiempo afinado.
+    if (!next.fresh) {
+      inTuneSinceRef.current = null;
+      return;
+    }
+
     // Una cuerda se marca como lista recién cuando se sostuvo afinada.
-    if (next.target && Math.abs(next.cents) <= IN_TUNE_CENTS) {
+    if (next.target && next.verdict === "afinada") {
       const held = inTuneSinceRef.current;
       const now = performance.now();
       if (held && held.index === next.target.index) {
@@ -170,7 +164,8 @@ export default function TunerScreen() {
     try {
       const mic = await openMicrophone({ fftSize: 4096 });
       micRef.current = mic;
-      trackerRef.current.reset();
+      stabilizerRef.current.reset();
+      lastReadingRef.current = null;
       setListening(true);
       timerRef.current = setInterval(analyze, ANALYSIS_MS);
       void activateKeepAwakeAsync(KEEP_AWAKE_TAG);
@@ -184,7 +179,8 @@ export default function TunerScreen() {
   /** Toca la cuerda al aire para afinar de oído, sin que el afinador se escuche. */
   const playReference = useCallback((target: StringTarget) => {
     muteUntilRef.current = performance.now() + 2600;
-    trackerRef.current.reset();
+    stabilizerRef.current.reset();
+    lastReadingRef.current = null;
     setReading(null);
     playChord([target.midi]);
   }, []);
@@ -223,6 +219,7 @@ export default function TunerScreen() {
         <TunerGauge
           cents={reading?.cents ?? null}
           verdict={reading?.verdict ?? null}
+          held={reading ? !reading.fresh : false}
           note={reading?.note ?? "—"}
           detail={
             reading
@@ -235,6 +232,7 @@ export default function TunerScreen() {
         <AppText
           variant="heading"
           align="center"
+          style={{ opacity: reading && !reading.fresh ? 0.5 : 1 }}
           color={!reading ? t.borderStrong : reading.verdict === "afinada" ? "#059669" : "#d97706"}
         >
           {reading?.verdict === "baja" && "◀ "}
@@ -253,7 +251,7 @@ export default function TunerScreen() {
               <View
                 style={[
                   styles.signalFill,
-                  { width: `${Math.min(100, level * 900)}%`, backgroundColor: level > 0.008 ? t.accent : t.borderStrong },
+                  { width: `${Math.min(100, level * 900)}%`, backgroundColor: level > DEFAULT_PITCH_OPTIONS.minLevel ? t.accent : t.borderStrong },
                 ]}
               />
             </View>
@@ -293,7 +291,7 @@ export default function TunerScreen() {
                   {done[target.index] && <AppText color="#059669">✓</AppText>}
                 </View>
                 <AppText variant="monoSmall">{target.frequency.toFixed(1)} Hz</AppText>
-                <AppText style={{ fontFamily: fonts.mono, fontSize: 12, height: 18, color: cents !== null && Math.abs(cents) <= IN_TUNE_CENTS ? "#059669" : "#d97706" }}>
+                <AppText style={{ fontFamily: fonts.mono, fontSize: 12, height: 18, color: cents !== null && reading!.verdict === "afinada" ? "#059669" : "#d97706" }}>
                   {cents !== null ? `${cents > 0 ? "+" : ""}${cents.toFixed(0)}` : ""}
                 </AppText>
                 <View style={styles.stringActions}>

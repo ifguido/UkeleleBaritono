@@ -4,31 +4,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BARITONE } from "@/lib/engine/notes";
 import {
   DEFAULT_A4,
-  IN_TUNE_CENTS,
   StringTarget,
-  TuningVerdict,
-  centsBetween,
+  TunerMode,
+  TunerReading,
   instructionFor,
-  nearestString,
-  readNote,
   stringTargets,
-  verdictFor,
+  tunerReading,
 } from "@/lib/engine/tuning";
-import { PitchTracker, detectPitch } from "@/lib/audio/pitch";
+import { DEFAULT_PITCH_OPTIONS, detectPitch } from "@/lib/audio/pitch";
+import { TunerStabilizer } from "@/lib/audio/stabilizer";
 import { Microphone, MicrophoneError, openMicrophone } from "@/lib/audio/microphone";
 import { playChord, preloadAudio } from "@/lib/audio/synth";
 import TunerGauge from "@/components/TunerGauge";
 
-type Mode = "cuerdas" | "cromatico";
+type Mode = TunerMode;
 
-interface Reading {
-  frequency: number;
-  /** Cuerda contra la que se compara (null en cromático o sin coincidencia). */
-  target: StringTarget | null;
-  cents: number;
-  verdict: TuningVerdict;
-  /** Nombre a mostrar en grande. */
-  note: string;
+interface Reading extends TunerReading {
+  /** false mientras se sostiene la última lectura de una cuerda que se apaga. */
+  fresh: boolean;
 }
 
 /** Milisegundos que hay que sostener la afinación para dar la cuerda por lista. */
@@ -55,7 +48,9 @@ export default function TunerPage() {
   const [done, setDone] = useState<Record<number, boolean>>({});
 
   const micRef = useRef<Microphone | null>(null);
-  const trackerRef = useRef(new PitchTracker());
+  const stabilizerRef = useRef(new TunerStabilizer());
+  // Lectura anterior, para la histéresis del verde.
+  const lastReadingRef = useRef<Reading | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inTuneSinceRef = useRef<{ index: number; at: number } | null>(null);
   // Mientras suena el tono de referencia, el micrófono se escucharía a sí mismo.
@@ -80,7 +75,8 @@ export default function TunerPage() {
     timerRef.current = null;
     micRef.current?.stop();
     micRef.current = null;
-    trackerRef.current.reset();
+    stabilizerRef.current.reset();
+    lastReadingRef.current = null;
     inTuneSinceRef.current = null;
     setListening(false);
     setReading(null);
@@ -96,13 +92,13 @@ export default function TunerPage() {
     // Con la pestaña oculta no hay nadie mirando: no tiene sentido gastar CPU
     // ni dejar un número viejo en pantalla.
     if (document.hidden) {
-      trackerRef.current.reset();
+      stabilizerRef.current.reset();
       setReading(null);
       return;
     }
 
     if (performance.now() < muteUntilRef.current) {
-      trackerRef.current.reset();
+      stabilizerRef.current.reset();
       setReading(null);
       return;
     }
@@ -111,57 +107,30 @@ export default function TunerPage() {
     setLevel(result.level);
 
     const usable = result.clarity >= MIN_CLARITY ? result.frequency : null;
-    const frequency = trackerRef.current.push(usable);
+    const stable = stabilizerRef.current.push(usable, performance.now(), result.level);
 
-    if (frequency === null) {
+    if (stable === null) {
+      lastReadingRef.current = null;
       setReading(null);
       inTuneSinceRef.current = null;
       return;
     }
 
-    const { mode: currentMode, pinned: pin, targets: currentTargets, a4: currentA4 } =
-      settingsRef.current;
-    let next: Reading;
-
-    if (currentMode === "cromatico") {
-      const note = readNote(frequency, currentA4);
-      next = {
-        frequency,
-        target: null,
-        cents: note.cents,
-        verdict: verdictFor(note.cents),
-        note: note.fullName,
-      };
-    } else {
-      const target =
-        pin !== null ? currentTargets[pin] : (nearestString(frequency, currentTargets)?.target ?? null);
-      if (target) {
-        const cents = centsBetween(frequency, target.frequency);
-        next = {
-          frequency,
-          target,
-          cents,
-          verdict: verdictFor(cents),
-          note: target.fullName,
-        };
-      } else {
-        // Suena algo que no es ninguna de las cuatro cuerdas: se dice qué es
-        // en vez de mandar a girar la clavija equivocada.
-        const note = readNote(frequency, currentA4);
-        next = {
-          frequency,
-          target: null,
-          cents: note.cents,
-          verdict: verdictFor(note.cents),
-          note: note.fullName,
-        };
-      }
-    }
-
+    const next: Reading = {
+      ...tunerReading(stable.frequency, settingsRef.current, lastReadingRef.current),
+      fresh: stable.fresh,
+    };
+    lastReadingRef.current = next;
     setReading(next);
 
+    // Mientras se sostiene una lectura vieja no se cuenta tiempo afinado.
+    if (!next.fresh) {
+      inTuneSinceRef.current = null;
+      return;
+    }
+
     // Una cuerda se marca como lista recién cuando se sostuvo afinada.
-    if (next.target && Math.abs(next.cents) <= IN_TUNE_CENTS) {
+    if (next.target && next.verdict === "afinada") {
       const held = inTuneSinceRef.current;
       const now = performance.now();
       if (held && held.index === next.target.index) {
@@ -184,7 +153,7 @@ export default function TunerPage() {
     try {
       const mic = await openMicrophone({ fftSize: 4096 });
       micRef.current = mic;
-      trackerRef.current.reset();
+      stabilizerRef.current.reset();
       setListening(true);
       timerRef.current = setInterval(analyze, ANALYSIS_MS);
     } catch (caught) {
@@ -201,7 +170,8 @@ export default function TunerPage() {
   /** Toca la cuerda al aire para afinar de oído, sin que el afinador se escuche. */
   const playReference = useCallback((target: StringTarget) => {
     muteUntilRef.current = performance.now() + 2600;
-    trackerRef.current.reset();
+    stabilizerRef.current.reset();
+    lastReadingRef.current = null;
     setReading(null);
     playChord([target.midi]);
   }, []);
@@ -249,7 +219,7 @@ export default function TunerPage() {
             <span className="text-xs text-stone-400">Señal</span>
             <div className="h-2 w-24 overflow-hidden rounded-full bg-stone-200">
               <div
-                className={`h-full ${level > 0.008 ? "bg-teal-600" : "bg-stone-300"}`}
+                className={`h-full ${level > DEFAULT_PITCH_OPTIONS.minLevel ? "bg-teal-600" : "bg-stone-300"}`}
                 style={{ width: `${Math.min(100, level * 900)}%` }}
               />
             </div>
@@ -268,6 +238,7 @@ export default function TunerPage() {
         <TunerGauge
           cents={reading?.cents ?? null}
           verdict={reading?.verdict ?? null}
+          held={reading ? !reading.fresh : false}
           note={reading?.note ?? "—"}
           detail={
             reading
@@ -278,7 +249,9 @@ export default function TunerPage() {
           }
         />
         <p
-          className={`mt-1 flex items-center gap-2 text-lg font-semibold ${
+          className={`mt-1 flex items-center gap-2 text-lg font-semibold transition-opacity ${
+            reading && !reading.fresh ? "opacity-50" : ""
+          } ${
             !reading
               ? "text-stone-300"
               : reading.verdict === "afinada"
@@ -351,7 +324,7 @@ export default function TunerPage() {
                   {cents !== null && (
                     <span
                       className={
-                        Math.abs(cents) <= IN_TUNE_CENTS ? "text-emerald-700" : "text-amber-700"
+                        reading!.verdict === "afinada" ? "text-emerald-700" : "text-amber-700"
                       }
                     >
                       {cents > 0 ? "+" : ""}

@@ -10,6 +10,7 @@ struct TunerView: View {
                 GaugeView(
                     cents: model.reading?.cents,
                     verdict: model.reading?.verdict,
+                    held: model.reading.map { !$0.fresh } ?? false,
                     note: model.reading?.note ?? "—",
                     detail: detailText
                 )
@@ -20,6 +21,9 @@ struct TunerView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .frame(maxWidth: .infinity)
+                    .opacity(model.reading.map { $0.fresh ? 1 : 0.5 } ?? 1)
+
+                if model.listening { signal }
 
                 // Centrado y más angosto que la pantalla: en el reloj los
                 // bordes son curvos y un botón de ancho completo parece corrido.
@@ -69,11 +73,27 @@ struct TunerView: View {
             .padding(.horizontal, 4)
         }
         .navigationTitle("Afinador")
-        // Al pasar a segundo plano se apaga el micrófono: nadie mira la
-        // pantalla y el sistema igual corta la captura.
+        // Se apaga solo al pasar a segundo plano. Al bajar la muñeca la app
+        // queda "inactiva" pero sigue al frente, y es justo cuando se está
+        // tocando: el afinador tiene que seguir escuchando y vibrar al afinar.
         .onChange(of: scenePhase) { _, phase in
-            if phase != .active, model.listening { model.stop() }
+            if phase == .background, model.listening { model.stop() }
         }
+    }
+
+    /// Nivel de entrada: si queda vacío mientras suena la cuerda, el reloj no
+    /// la está oyendo (lejos, tapado por la manga, sin permiso).
+    private var signal: some View {
+        let fill = min(1, (model.level / 0.03).squareRoot())
+        let heard = model.level > TunerModel.pitchOptions.minLevel
+        return GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Palette.track)
+                Capsule().fill(heard ? Palette.accent : Palette.soft).frame(width: geo.size.width * fill)
+            }
+        }
+        .frame(width: 90, height: 4)
+        .accessibilityLabel("Nivel de señal")
     }
 
     private var strings: some View {

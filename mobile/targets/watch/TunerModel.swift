@@ -11,6 +11,8 @@ struct Reading: Equatable {
     let verdict: TuningVerdict
     /// Nombre a mostrar en grande.
     let note: String
+    /// false mientras se sostiene la última lectura de una cuerda que se apaga.
+    let fresh: Bool
 }
 
 enum TunerMode: String, CaseIterable, Identifiable {
@@ -20,7 +22,8 @@ enum TunerMode: String, CaseIterable, Identifiable {
 }
 
 /// Estado del afinador. Es el mismo bucle que `afinador/index.tsx` del
-/// teléfono: análisis cada 40 ms, mediana corta, y una cuerda se da por
+/// teléfono: análisis cada 40 ms, estabilizador (suaviza, salta de cuerda y
+/// sostiene la lectura mientras la cuerda se apaga), y una cuerda se da por
 /// lista recién cuando se sostuvo afinada 0,7 s.
 @MainActor
 final class TunerModel: ObservableObject {
@@ -36,7 +39,7 @@ final class TunerModel: ObservableObject {
     let targets = stringTargets()
 
     private let input = AudioInput(windowSize: 4096)
-    private let tracker = PitchTracker()
+    private let stabilizer = TunerStabilizer()
     private var timer: Timer?
     private var inTuneSince: (index: Int, at: Date)?
 
@@ -44,6 +47,11 @@ final class TunerModel: ObservableObject {
     /// Debajo de esta claridad, lo que entra por el micrófono no es una cuerda.
     private static let minClarity = 0.82
     private static let analysisInterval: TimeInterval = 0.04
+    /// El micrófono del reloj está en la muñeca, lejos de la boca del
+    /// instrumento, y entrega mucha menos señal que el del teléfono: con el
+    /// umbral del teléfono la cuerda no llegaba a pasar nunca. El ruido de
+    /// fondo lo sigue descartando la claridad.
+    static let pitchOptions = PitchOptions(minLevel: 0.001)
 
     var allDone: Bool { targets.allSatisfy { done.contains($0.index) } }
 
@@ -67,7 +75,7 @@ final class TunerModel: ObservableObject {
             error = "No pude abrir el micrófono: \(failure.localizedDescription)"
             return
         }
-        tracker.reset()
+        stabilizer.reset()
         listening = true
         timer = Timer.scheduledTimer(withTimeInterval: Self.analysisInterval, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.analyze() }
@@ -78,7 +86,7 @@ final class TunerModel: ObservableObject {
         timer?.invalidate()
         timer = nil
         input.stop()
-        tracker.reset()
+        stabilizer.reset()
         inTuneSince = nil
         listening = false
         reading = nil
@@ -91,32 +99,41 @@ final class TunerModel: ObservableObject {
 
     private func analyze() {
         guard listening else { return }
-        let result = detectPitch(input.read(), sampleRate: input.sampleRate)
+        let result = detectPitch(input.read(), sampleRate: input.sampleRate, options: Self.pitchOptions)
         level = result.level
 
         let usable = result.clarity >= Self.minClarity ? result.frequency : nil
-        guard let frequency = tracker.push(usable) else {
+        guard let stable = stabilizer.push(usable, now: ProcessInfo.processInfo.systemUptime, level: result.level) else {
             reading = nil
             inTuneSince = nil
             return
         }
+        let frequency = stable.frequency
+        // La histéresis del verde vale solo si sigue sonando la misma nota.
+        let previous = reading
+        func verdict(_ note: String, _ cents: Double) -> TuningVerdict {
+            stickyVerdict(cents, previous: previous?.note == note ? previous?.verdict : nil)
+        }
 
         let next: Reading
-        if mode == .chromatic {
-            let note = readNote(frequency)
-            next = Reading(frequency: frequency, target: nil, cents: note.cents, verdict: verdictFor(note.cents), note: note.fullName)
-        } else if let target = pinned.map({ targets[$0] }) ?? nearestString(frequency, targets: targets)?.target {
+        if mode == .strings, let target = pinned.map({ targets[$0] }) ?? nearestString(frequency, targets: targets)?.target {
             let cents = centsBetween(frequency, target.frequency)
-            next = Reading(frequency: frequency, target: target, cents: cents, verdict: verdictFor(cents), note: target.fullName)
+            next = Reading(frequency: frequency, target: target, cents: cents, verdict: verdict(target.fullName, cents), note: target.fullName, fresh: stable.fresh)
         } else {
-            // Suena algo que no es ninguna de las cuatro cuerdas: se dice qué
-            // es en vez de mandar a girar la clavija equivocada.
+            // Cromático, o suena algo que no es ninguna de las cuatro cuerdas:
+            // se dice qué es en vez de mandar a girar la clavija equivocada.
             let note = readNote(frequency)
-            next = Reading(frequency: frequency, target: nil, cents: note.cents, verdict: verdictFor(note.cents), note: note.fullName)
+            next = Reading(frequency: frequency, target: nil, cents: note.cents, verdict: verdict(note.fullName, note.cents), note: note.fullName, fresh: stable.fresh)
         }
         reading = next
 
-        if let target = next.target, abs(next.cents) <= inTuneCents {
+        // Mientras se sostiene una lectura vieja no se cuenta tiempo afinado.
+        guard stable.fresh else {
+            inTuneSince = nil
+            return
+        }
+
+        if let target = next.target, next.verdict == .inTune {
             let now = Date()
             if let held = inTuneSince, held.index == target.index {
                 if now.timeIntervalSince(held.at) >= Self.holdSeconds, !done.contains(target.index) {

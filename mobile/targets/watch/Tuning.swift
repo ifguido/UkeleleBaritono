@@ -103,6 +103,15 @@ func verdictFor(_ cents: Double, tolerance: Double = inTuneCents) -> TuningVerdi
     return cents < 0 ? .low : .high
 }
 
+/// Margen extra para salir del verde una vez que se entró.
+let inTuneReleaseCents: Double = 2
+
+/// `verdictFor` con histéresis: se entra al verde en ±5 y se sale recién
+/// pasando ±7, así una cuerda justo en el borde no parpadea.
+func stickyVerdict(_ cents: Double, previous: TuningVerdict?, tolerance: Double = inTuneCents) -> TuningVerdict {
+    verdictFor(cents, tolerance: previous == .inTune ? tolerance + inTuneReleaseCents : tolerance)
+}
+
 /// Qué hacer con la clavija. Si el desvío se sale del dial, avisa que hay que
 /// girar bastante, no un toque.
 func instructionFor(_ verdict: TuningVerdict, cents: Double = 0) -> String {

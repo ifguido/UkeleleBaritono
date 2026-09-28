@@ -7,6 +7,8 @@ struct GaugeView: View {
     /// Desvío en cents, o nil si no hay nota.
     let cents: Double?
     let verdict: TuningVerdict?
+    /// La cuerda dejó de sonar y se está mostrando la última lectura.
+    var held = false
     let note: String
     let detail: String
     var range: Double = 50
@@ -56,14 +58,17 @@ struct GaugeView: View {
                 // Indicador: se rota alrededor del centro del arco
                 IndicatorShape(center: center, radius: radius, ring: ring)
                     .fill(color)
-                    .opacity(cents == nil ? 0.25 : 1)
+                    .opacity(cents == nil ? 0.25 : held ? 0.5 : 1)
                     .rotationEffect(.degrees(angle), anchor: UnitPoint(x: 0.5, y: center.y / max(geo.size.height, 1)))
-                    .animation(.linear(duration: 0.09), value: angle)
+                    // La lectura ya llega suavizada: la animación solo rellena
+                    // los 40 ms entre cuadros.
+                    .animation(.easeOut(duration: 0.14), value: angle)
+                    .animation(.easeInOut(duration: 0.3), value: held)
 
                 VStack(spacing: 0) {
                     Text(note)
                         .font(.system(size: note.count > 2 ? w * 0.19 : w * 0.22, weight: .bold, design: .rounded))
-                        .foregroundStyle(cents == nil ? Palette.soft : Palette.ink)
+                        .foregroundStyle(cents == nil ? Palette.soft : held ? Palette.muted : Palette.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                     Text(detail)

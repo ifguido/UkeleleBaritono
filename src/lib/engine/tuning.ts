@@ -111,6 +111,70 @@ export function verdictFor(cents: number, tolerance = IN_TUNE_CENTS): TuningVerd
   return cents < 0 ? "baja" : "alta";
 }
 
+/** Margen extra para salir del verde una vez que se entró. */
+export const IN_TUNE_RELEASE_CENTS = 2;
+
+/**
+ * `verdictFor` con histéresis: se entra al verde en ±5 y se sale recién
+ * pasando ±7. Sin esto, una cuerda que queda justo en el borde parpadea entre
+ * verde y ámbar con cada cuadro.
+ */
+export function stickyVerdict(
+  cents: number,
+  previous: TuningVerdict | null,
+  tolerance = IN_TUNE_CENTS,
+): TuningVerdict {
+  return verdictFor(cents, previous === "afinada" ? tolerance + IN_TUNE_RELEASE_CENTS : tolerance);
+}
+
+export type TunerMode = "cuerdas" | "cromatico";
+
+/** Lo que muestra el dial en un instante. */
+export interface TunerReading {
+  frequency: number;
+  /** Cuerda contra la que se compara (null en cromático o sin coincidencia). */
+  target: StringTarget | null;
+  cents: number;
+  verdict: TuningVerdict;
+  /** Nombre a mostrar en grande. */
+  note: string;
+}
+
+export interface TunerSettings {
+  mode: TunerMode;
+  /** Cuerda fijada por el usuario, o null para detectarla sola. */
+  pinned: number | null;
+  targets: StringTarget[];
+  a4: number;
+}
+
+/**
+ * Traduce una frecuencia a lo que hay que mostrar. `previous` es la lectura
+ * anterior: si sigue siendo la misma nota, el veredicto conserva la
+ * histéresis del verde.
+ */
+export function tunerReading(
+  frequency: number,
+  settings: TunerSettings,
+  previous: TunerReading | null,
+): TunerReading {
+  const { mode, pinned, targets, a4 } = settings;
+  const verdictAfter = (note: string, cents: number) =>
+    stickyVerdict(cents, previous?.note === note ? previous.verdict : null);
+
+  if (mode === "cuerdas") {
+    const target = pinned !== null ? targets[pinned] : (nearestString(frequency, targets)?.target ?? null);
+    if (target) {
+      const cents = centsBetween(frequency, target.frequency);
+      return { frequency, target, cents, verdict: verdictAfter(target.fullName, cents), note: target.fullName };
+    }
+  }
+  // Cromático, o suena algo que no es ninguna de las cuatro cuerdas: se dice
+  // qué es en vez de mandar a girar la clavija equivocada.
+  const note = readNote(frequency, a4);
+  return { frequency, target: null, cents: note.cents, verdict: verdictAfter(note.fullName, note.cents), note: note.fullName };
+}
+
 /**
  * Qué hacer con la clavija.
  *

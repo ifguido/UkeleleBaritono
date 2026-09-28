@@ -3,10 +3,14 @@ import Foundation
 
 /// Micrófono del reloj para el afinador.
 ///
-/// Igual que en el teléfono: sesión en modo `measurement` (sin cancelación de
-/// eco ni control automático de ganancia, que le comen los armónicos a la
-/// cuerda) y un buffer circular con la última ventana de muestras, que el
-/// bucle de análisis lee 25 veces por segundo.
+/// Un buffer circular con la última ventana de muestras, que el bucle de
+/// análisis lee 25 veces por segundo.
+///
+/// A diferencia del teléfono, la sesión va en modo `default` y no en
+/// `measurement`: en el reloj, `measurement` apaga la ganancia automática y el
+/// micrófono (en la muñeca, lejos de la cuerda) entrega una señal tan baja
+/// que el detector no llegaba a oír nada. Para la altura de una nota la
+/// ganancia automática no molesta: cambia el volumen, no el período.
 final class AudioInput {
     enum Failure: Error {
         case denied
@@ -43,7 +47,7 @@ final class AudioInput {
 
         let session = AVAudioSession.sharedInstance()
         do {
-            try session.setCategory(.record, mode: .measurement, options: [])
+            try session.setCategory(.record, mode: .default, options: [])
             try session.setActive(true)
         } catch {
             throw Failure.unavailable(error.localizedDescription)

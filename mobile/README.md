@@ -126,11 +126,15 @@ no corre en watchOS). La agrega al proyecto de Xcode el plugin `@bacons/apple-ta
 `prebuild`, como target `UkeleleWatch` (bundle id `com.ifguido.ukelelebaritono.watchkitapp`), y se
 publica dentro de la misma ficha del App Store.
 
-- `Pitch.swift` y `Tuning.swift` son traducciones fieles de `src/lib/audio/pitch.ts` y
-  `src/lib/engine/tuning.ts` (mismo YIN, mismos umbrales). Si se cambia algo allá, se cambia acá.
+- `Pitch.swift`, `Stabilizer.swift` y `Tuning.swift` son traducciones fieles de
+  `src/lib/audio/pitch.ts`, `src/lib/audio/stabilizer.ts` y `src/lib/engine/tuning.ts` (mismo YIN,
+  mismo suavizado, mismos umbrales). Si se cambia algo allá, se cambia acá. Única diferencia a
+  propósito: el reloj usa un umbral de nivel más bajo y la sesión en modo `default` (con ganancia
+  automática), porque su micrófono en la muñeca recibe mucha menos señal que el del teléfono.
 - `AudioInput.swift` toma el micrófono del reloj con `AVAudioEngine` en modo *measurement*;
-  `TunerModel.swift` es el mismo bucle que la pantalla del teléfono (40 ms, mediana, 0,7 s para dar
-  la cuerda por afinada, vibración al lograrlo).
+  `TunerModel.swift` es el mismo bucle que la pantalla del teléfono (40 ms, estabilizador, 0,7 s
+  para dar la cuerda por afinada, vibración al lograrlo). Sigue escuchando con la muñeca baja (estado
+  inactivo); se apaga solo cuando la app pasa a segundo plano.
 - `Info.plist` del target lleva el texto de permiso de micrófono y `WKRunsIndependentlyOfCompanionApp`.
 - **Para compilar el proyecto hace falta la plataforma watchOS en Xcode** (Xcode › Settings ›
   Components › watchOS, unos 4 GB), también para archivar la app del iPhone, porque la del reloj va

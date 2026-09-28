@@ -39,7 +39,9 @@ export const DEFAULT_PITCH_OPTIONS: Required<PitchOptions> = {
   minFrequency: 60,
   maxFrequency: 1200,
   threshold: 0.15,
-  minLevel: 0.008,
+  // Bajo a propósito: la cuerda de nylon se apaga rápido y un umbral alto la
+  // pierde cuando todavía se oye. El ruido de fondo lo descarta la claridad.
+  minLevel: 0.004,
 };
 
 /** Cuando ningún mínimo baja del umbral, se acepta el mejor si al menos llega acá. */

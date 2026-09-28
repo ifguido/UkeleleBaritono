@@ -6,6 +6,8 @@ interface Props {
   /** Desvío en cents, o null si no hay nota. */
   cents: number | null;
   verdict: TuningVerdict | null;
+  /** La cuerda dejó de sonar y se está mostrando la última lectura. */
+  held?: boolean;
   /** Nota grande del centro ("D3"). */
   note: string;
   /** Línea de abajo ("146,8 Hz · −20 cents"). */
@@ -37,8 +39,11 @@ const SWEEP = 68; // grados hacia cada lado
  *
  * La zona verde son los ±5 cents que el oído no distingue: llegar ahí es
  * haber terminado, no hace falta clavar el cero.
+ *
+ * La lectura ya llega suavizada (ver `TunerStabilizer`); la transición solo
+ * rellena los 40 ms entre cuadros para que el movimiento sea continuo.
  */
-export default function TunerGauge({ cents, verdict, note, detail, range = 50 }: Props) {
+export default function TunerGauge({ cents, verdict, held = false, note, detail, range = 50 }: Props) {
   const clamped = cents === null ? 0 : Math.max(-range, Math.min(range, cents));
   const angle = (clamped / range) * SWEEP;
   const color = verdict ? COLORS[verdict] : "#a8a29e";
@@ -91,8 +96,8 @@ export default function TunerGauge({ cents, verdict, note, detail, range = 50 }:
       {/* Indicador: viaja sobre el arco */}
       <g
         transform={`rotate(${angle} ${CX} ${CY})`}
-        style={{ transition: "transform 90ms linear" }}
-        opacity={silent ? 0.2 : 1}
+        style={{ transition: "transform 140ms ease-out, opacity 300ms" }}
+        opacity={silent ? 0.2 : held ? 0.5 : 1}
       >
         <path d={arc(-2.6, 2.6, RADIUS)} fill="none" stroke={color} strokeWidth={RING + 6}
           strokeLinecap="butt" />
@@ -104,7 +109,8 @@ export default function TunerGauge({ cents, verdict, note, detail, range = 50 }:
 
       {/* Lectura, siempre despejada en el centro */}
       <text x={CX} y={CY - 46} fontSize={note.length > 2 ? 46 : 52}
-        fill={silent ? "#d6d3d1" : "#1c1917"} textAnchor="middle" fontWeight={700}>
+        fill={silent ? "#d6d3d1" : held ? "#a8a29e" : "#1c1917"} textAnchor="middle" fontWeight={700}
+        style={{ transition: "fill 300ms" }}>
         {note}
       </text>
       <text x={CX} y={CY - 22} fontSize={12.5} fill="#78716c" textAnchor="middle"
